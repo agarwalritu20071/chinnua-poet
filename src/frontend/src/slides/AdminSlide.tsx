@@ -7,13 +7,19 @@ import { motion } from "motion/react";
 import React from "react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { AI_BOTS } from "../data/ai-bots";
 import { useActor } from "../hooks/useActor";
 import { POEMS } from "../poems-data";
 
 interface UserEntry {
   username: string;
+  name?: string;
+  displayName?: string;
   bio: string;
-  createdAt: string;
+  email?: string;
+  phone?: string;
+  createdAt?: string;
+  joinedAt?: string;
 }
 interface Post {
   id: string;
@@ -32,7 +38,7 @@ interface GalleryPhoto {
 const WARM_GOLD = "#D4A853";
 const WARM_BROWN = "#8B6F47";
 const WARM_MOCHA = "#5C3D2E";
-const WARM_PAPER = "#F5ECD7";
+const _WARM_PAPER = "#F5ECD7";
 const WARM_TEXT = "#3D2B1F";
 const WARM_MUTED = "#9E8070";
 
@@ -43,6 +49,577 @@ interface InkReply {
   adminReply?: string;
   submittedAt: string;
   repliedAt?: string;
+}
+
+function AiUsersTab() {
+  const WARM_MOCHA = "#5C3D2E";
+  const WARM_BROWN = "#8B6F47";
+  const WARM_PAPER = "#F5ECD7";
+  const WARM_BORDER = "rgba(139,111,71,0.25)";
+  const WARM_TEXT = "#3D2B1F";
+
+  const [passwords, setPasswords] = useState<Record<string, string>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("chinnua_bot_passwords") || "{}");
+    } catch {
+      return {};
+    }
+  });
+  const [editPw, setEditPw] = useState<string | null>(null);
+  const [pwValue, setPwValue] = useState("");
+
+  const savePw = (username: string) => {
+    const updated = { ...passwords, [username]: pwValue };
+    localStorage.setItem("chinnua_bot_passwords", JSON.stringify(updated));
+    setPasswords(updated);
+    setEditPw(null);
+    setPwValue("");
+  };
+
+  return (
+    <div>
+      <h3
+        style={{
+          fontFamily: "'Playfair Display', Georgia, serif",
+          color: WARM_MOCHA,
+          marginBottom: "1rem",
+        }}
+      >
+        AI Bot Users
+      </h3>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(250px, 1fr))",
+          gap: "1rem",
+        }}
+      >
+        {AI_BOTS.map((bot) => (
+          <div
+            key={bot.username}
+            style={{
+              background: WARM_PAPER,
+              border: `1px solid ${WARM_BORDER}`,
+              borderRadius: 12,
+              padding: "1rem",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.75rem",
+                marginBottom: "0.6rem",
+              }}
+            >
+              <img
+                src={bot.photo}
+                alt={bot.displayName}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: "50%",
+                  objectFit: "cover",
+                }}
+              />
+              <div>
+                <div
+                  style={{
+                    fontFamily: "'Playfair Display', Georgia, serif",
+                    fontWeight: 700,
+                    color: WARM_MOCHA,
+                    fontSize: "0.9rem",
+                  }}
+                >
+                  {bot.displayName}
+                </div>
+                <div style={{ fontSize: "0.72rem", color: WARM_BROWN }}>
+                  @{bot.username}
+                </div>
+              </div>
+            </div>
+            <p
+              style={{
+                fontFamily: "'Lora', Georgia, serif",
+                fontStyle: "italic",
+                fontSize: "0.78rem",
+                color: WARM_BROWN,
+                marginBottom: "0.8rem",
+              }}
+            >
+              {bot.bio}
+            </p>
+            <div
+              style={{
+                fontSize: "0.72rem",
+                color: WARM_BROWN,
+                marginBottom: "0.5rem",
+              }}
+            >
+              Password:{" "}
+              <strong style={{ color: WARM_MOCHA }}>
+                {passwords[bot.username] ?? "bot2026"}
+              </strong>
+            </div>
+            {editPw === bot.username ? (
+              <div style={{ display: "flex", gap: "0.4rem" }}>
+                <input
+                  type="text"
+                  value={pwValue}
+                  onChange={(e) => setPwValue(e.target.value)}
+                  placeholder="New password"
+                  style={{
+                    flex: 1,
+                    padding: "0.3rem 0.5rem",
+                    border: `1px solid ${WARM_BORDER}`,
+                    borderRadius: 6,
+                    fontFamily: "'Lora', Georgia, serif",
+                    fontSize: "0.78rem",
+                    background: "white",
+                    color: WARM_TEXT,
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => savePw(bot.username)}
+                  style={{
+                    padding: "0.3rem 0.6rem",
+                    background: "rgba(212,168,83,0.15)",
+                    border: `1px solid ${WARM_BORDER}`,
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    fontSize: "0.75rem",
+                    color: WARM_MOCHA,
+                  }}
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditPw(null);
+                    setPwValue("");
+                  }}
+                  style={{
+                    padding: "0.3rem 0.5rem",
+                    background: "none",
+                    border: `1px solid ${WARM_BORDER}`,
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    fontSize: "0.75rem",
+                    color: WARM_BROWN,
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditPw(bot.username);
+                  setPwValue(passwords[bot.username] ?? "bot2026");
+                }}
+                style={{
+                  padding: "0.3rem 0.8rem",
+                  background: "rgba(139,111,71,0.1)",
+                  border: `1px solid ${WARM_BORDER}`,
+                  borderRadius: 6,
+                  cursor: "pointer",
+                  fontFamily: "'Lora', Georgia, serif",
+                  fontSize: "0.75rem",
+                  color: WARM_BROWN,
+                }}
+              >
+                Change Password
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MusicManagementTab() {
+  const WARM_MOCHA = "#5C3D2E";
+  const WARM_BROWN = "#8B6F47";
+  const WARM_PAPER = "#F5ECD7";
+  const WARM_BORDER = "rgba(139,111,71,0.25)";
+  const WARM_GOLD = "#D4A853";
+  const WARM_TEXT = "#3D2B1F";
+
+  interface Track {
+    id: string;
+    title: string;
+    artist: string;
+    mood: string;
+    spotifyUrl: string;
+    audioData?: string;
+    fileName?: string;
+  }
+  const DEFAULT_TRACKS: Track[] = [
+    {
+      id: "default_1",
+      title: "Autumn Letters",
+      artist: "The Cinematic Orchestra",
+      mood: "Sad",
+      spotifyUrl:
+        "https://open.spotify.com/search/autumn+letters+cinematic+orchestra",
+    },
+    {
+      id: "default_2",
+      title: "Experience",
+      artist: "Ludovico Einaudi",
+      mood: "Peaceful",
+      spotifyUrl: "https://open.spotify.com/search/experience+ludovico+einaudi",
+    },
+    {
+      id: "default_3",
+      title: "River Flows in You",
+      artist: "Yiruma",
+      mood: "Romantic",
+      spotifyUrl: "https://open.spotify.com/search/river+flows+in+you+yiruma",
+    },
+    {
+      id: "default_4",
+      title: "Night in the Forest",
+      artist: "Max Richter",
+      mood: "Dark",
+      spotifyUrl: "https://open.spotify.com/search/max+richter+night",
+    },
+    {
+      id: "default_5",
+      title: "Golden Hour",
+      artist: "JVKE",
+      mood: "Hopeful",
+      spotifyUrl: "https://open.spotify.com/search/golden+hour+jvke",
+    },
+  ];
+
+  const [tracks, setTracks] = useState<Track[]>(() => {
+    try {
+      const stored = JSON.parse(
+        localStorage.getItem("chinnua_music_library") || "null",
+      );
+      return stored ?? DEFAULT_TRACKS;
+    } catch {
+      return DEFAULT_TRACKS;
+    }
+  });
+  const [newTrack, setNewTrack] = useState({
+    title: "",
+    artist: "",
+    mood: "Peaceful",
+    spotifyUrl: "",
+  });
+
+  const [pendingAudio, setPendingAudio] = React.useState<{
+    data: string;
+    fileName: string;
+  } | null>(null);
+
+  const handleAudioFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Audio file must be under 10MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const data = ev.target?.result as string;
+      setPendingAudio({ data, fileName: file.name });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const addTrack = () => {
+    if (!newTrack.title.trim() || !newTrack.artist.trim()) return;
+    const track: Track = {
+      ...newTrack,
+      id: `track_${Date.now()}`,
+      ...(pendingAudio
+        ? { audioData: pendingAudio.data, fileName: pendingAudio.fileName }
+        : {}),
+    };
+    const updated = [...tracks, track];
+    setTracks(updated);
+    localStorage.setItem("chinnua_music_library", JSON.stringify(updated));
+    setNewTrack({ title: "", artist: "", mood: "Peaceful", spotifyUrl: "" });
+    setPendingAudio(null);
+  };
+
+  const deleteTrack = (id: string) => {
+    const updated = tracks.filter((t) => t.id !== id);
+    setTracks(updated);
+    localStorage.setItem("chinnua_music_library", JSON.stringify(updated));
+  };
+
+  const moods = ["Sad", "Romantic", "Dark", "Hopeful", "Peaceful", "Energetic"];
+
+  return (
+    <div>
+      <h3
+        style={{
+          fontFamily: "'Playfair Display', Georgia, serif",
+          color: WARM_MOCHA,
+          marginBottom: "1rem",
+        }}
+      >
+        Music Library
+      </h3>
+      <div
+        style={{
+          background: WARM_PAPER,
+          border: `1px solid ${WARM_BORDER}`,
+          borderRadius: 12,
+          padding: "1.2rem",
+          marginBottom: "1.5rem",
+        }}
+      >
+        <h4
+          style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            color: WARM_MOCHA,
+            marginBottom: "0.8rem",
+            fontSize: "0.9rem",
+          }}
+        >
+          Add New Track
+        </h4>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "0.75rem",
+            marginBottom: "0.75rem",
+          }}
+        >
+          <input
+            type="text"
+            placeholder="Track title"
+            value={newTrack.title}
+            onChange={(e) =>
+              setNewTrack((p) => ({ ...p, title: e.target.value }))
+            }
+            style={{
+              padding: "0.5rem 0.75rem",
+              border: `1px solid ${WARM_BORDER}`,
+              borderRadius: 8,
+              fontFamily: "'Lora', Georgia, serif",
+              fontSize: "0.85rem",
+              color: WARM_TEXT,
+              background: "white",
+            }}
+          />
+          <input
+            type="text"
+            placeholder="Artist name"
+            value={newTrack.artist}
+            onChange={(e) =>
+              setNewTrack((p) => ({ ...p, artist: e.target.value }))
+            }
+            style={{
+              padding: "0.5rem 0.75rem",
+              border: `1px solid ${WARM_BORDER}`,
+              borderRadius: 8,
+              fontFamily: "'Lora', Georgia, serif",
+              fontSize: "0.85rem",
+              color: WARM_TEXT,
+              background: "white",
+            }}
+          />
+          <input
+            type="text"
+            placeholder="Spotify URL"
+            value={newTrack.spotifyUrl}
+            onChange={(e) =>
+              setNewTrack((p) => ({ ...p, spotifyUrl: e.target.value }))
+            }
+            style={{
+              padding: "0.5rem 0.75rem",
+              border: `1px solid ${WARM_BORDER}`,
+              borderRadius: 8,
+              fontFamily: "'Lora', Georgia, serif",
+              fontSize: "0.85rem",
+              color: WARM_TEXT,
+              background: "white",
+            }}
+          />
+          <select
+            value={newTrack.mood}
+            onChange={(e) =>
+              setNewTrack((p) => ({ ...p, mood: e.target.value }))
+            }
+            style={{
+              padding: "0.5rem 0.75rem",
+              border: `1px solid ${WARM_BORDER}`,
+              borderRadius: 8,
+              fontFamily: "'Lora', Georgia, serif",
+              fontSize: "0.85rem",
+              color: WARM_TEXT,
+              background: "white",
+            }}
+          >
+            {moods.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </div>
+        {/* Audio upload */}
+        <div style={{ marginBottom: "0.75rem" }}>
+          <label
+            htmlFor="audio-file-upload"
+            style={{
+              display: "block",
+              fontFamily: "'Lora', Georgia, serif",
+              fontSize: "0.82rem",
+              color: WARM_BROWN,
+              marginBottom: "0.4rem",
+            }}
+          >
+            Upload Audio File (optional, max 10MB)
+          </label>
+          <input
+            id="audio-file-upload"
+            type="file"
+            accept="audio/*"
+            onChange={handleAudioFile}
+            data-ocid="admin.upload_button"
+            style={{
+              fontFamily: "'Lora', Georgia, serif",
+              fontSize: "0.8rem",
+              color: WARM_TEXT,
+            }}
+          />
+          {pendingAudio && (
+            <p
+              style={{
+                fontFamily: "'Lora', Georgia, serif",
+                fontSize: "0.75rem",
+                color: WARM_BROWN,
+                marginTop: "0.3rem",
+                fontStyle: "italic",
+              }}
+            >
+              Ready: {pendingAudio.fileName}
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={addTrack}
+          data-ocid="admin.primary_button"
+          style={{
+            padding: "0.5rem 1.5rem",
+            background: "rgba(212,168,83,0.15)",
+            border: "1px solid rgba(212,168,83,0.4)",
+            borderRadius: 8,
+            cursor: "pointer",
+            fontFamily: "'Lora', Georgia, serif",
+            fontSize: "0.85rem",
+            color: WARM_MOCHA,
+            fontWeight: 600,
+          }}
+        >
+          Add Track
+        </button>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+        {tracks.map((track) => (
+          <div
+            key={track.id}
+            style={{
+              background: WARM_PAPER,
+              border: `1px solid ${WARM_BORDER}`,
+              borderRadius: 10,
+              padding: "0.9rem 1rem",
+              display: "flex",
+              alignItems: "center",
+              gap: "1rem",
+            }}
+          >
+            <div style={{ flex: 1 }}>
+              <span
+                style={{
+                  fontFamily: "'Playfair Display', Georgia, serif",
+                  fontWeight: 700,
+                  color: WARM_MOCHA,
+                  fontSize: "0.9rem",
+                }}
+              >
+                {track.title}
+              </span>
+              <span
+                style={{
+                  fontFamily: "'Lora', Georgia, serif",
+                  fontSize: "0.8rem",
+                  color: WARM_BROWN,
+                  marginLeft: "0.5rem",
+                }}
+              >
+                — {track.artist}
+              </span>
+            </div>
+            <span
+              style={{
+                padding: "0.2rem 0.6rem",
+                background: "rgba(212,168,83,0.12)",
+                borderRadius: 12,
+                fontSize: "0.7rem",
+                color: WARM_BROWN,
+                flexShrink: 0,
+              }}
+            >
+              {track.mood}
+            </span>
+            {track.spotifyUrl && (
+              <a
+                href={track.spotifyUrl}
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  fontSize: "0.75rem",
+                  color: WARM_GOLD,
+                  textDecoration: "none",
+                  flexShrink: 0,
+                }}
+              >
+                Spotify
+              </a>
+            )}
+            {(track as any).audioData && (
+              <audio
+                controls
+                src={(track as any).audioData}
+                style={{ height: 28, flexShrink: 0, maxWidth: 140 }}
+              >
+                <track kind="captions" srcLang="en" label="English" />
+              </audio>
+            )}
+            <button
+              type="button"
+              onClick={() => deleteTrack(track.id)}
+              data-ocid="admin.delete_button"
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "rgba(248,113,113,0.7)",
+                fontSize: "1rem",
+                flexShrink: 0,
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function DailyLettersTab() {
@@ -179,7 +756,7 @@ function DailyLettersTab() {
                     border: "none",
                     borderRadius: 6,
                     padding: "0.3rem 0.8rem",
-                    color: WARM_PAPER,
+                    color: "#3D2B1F",
                     cursor: "pointer",
                     fontSize: "0.78rem",
                     fontFamily: "'Lora', Georgia, serif",
@@ -381,7 +958,7 @@ function DailyLettersTab() {
             border: "none",
             borderRadius: 8,
             padding: "0.5rem 1.25rem",
-            color: WARM_PAPER,
+            color: "#3D2B1F",
             fontFamily: "'Lora', Georgia, serif",
             fontSize: "0.85rem",
             cursor: "pointer",
@@ -563,7 +1140,7 @@ function InkRepliesTab() {
                     border: "none",
                     borderRadius: 8,
                     padding: "0.4rem 1rem",
-                    color: WARM_PAPER,
+                    color: "#3D2B1F",
                     fontFamily: "'Lora', Georgia, serif",
                     fontSize: "0.82rem",
                     cursor: "pointer",
@@ -581,6 +1158,1411 @@ function InkRepliesTab() {
   );
 }
 
+function AdminInboxTab() {
+  const WARM_MOCHA = "#5C3D2E";
+  const WARM_BROWN = "#8B6F47";
+  const WARM_PAPER = "#F5ECD7";
+  const WARM_BORDER = "rgba(139,111,71,0.25)";
+  const WARM_GOLD = "#D4A853";
+  const WARM_TEXT = "#3D2B1F";
+
+  interface InboxMsg {
+    id: string;
+    from: string;
+    to: string;
+    text: string;
+    timestamp: string;
+  }
+
+  interface Conversation {
+    username: string;
+    lastMsg: string;
+    lastTime: string;
+    messages: InboxMsg[];
+  }
+
+  const [conversations, setConversations] = React.useState<Conversation[]>([]);
+  const [selectedUser, setSelectedUser] = React.useState<string | null>(null);
+  const [newMessage, setNewMessage] = React.useState("");
+  const [showNewConv, setShowNewConv] = React.useState(false);
+  const [newConvUsername, setNewConvUsername] = React.useState("");
+  const [lastRefresh, setLastRefresh] = React.useState(new Date());
+
+  const loadConversations = React.useCallback(() => {
+    const allKeys = Object.keys(localStorage).filter((k) =>
+      k.startsWith("chinnua_conv_"),
+    );
+    const convMap: Record<string, InboxMsg[]> = {};
+    for (const key of allKeys) {
+      try {
+        const msgs: InboxMsg[] = JSON.parse(localStorage.getItem(key) || "[]");
+        for (const m of msgs) {
+          const otherUser = m.from === "CHINNUA_POET" ? m.to : m.from;
+          if (otherUser !== "CHINNUA_POET") {
+            if (!convMap[otherUser]) convMap[otherUser] = [];
+            convMap[otherUser].push(m);
+          }
+        }
+        // Also check key naming pattern
+        const keyParts = key.replace("chinnua_conv_", "").split("_");
+        for (const part of keyParts) {
+          if (part && part !== "CHINNUA" && part !== "POET") {
+            if (!convMap[part]) convMap[part] = [];
+          }
+        }
+      } catch {}
+    }
+    const convList: Conversation[] = Object.entries(convMap).map(
+      ([username, msgs]) => {
+        const sorted = [...msgs].sort(
+          (a, b) =>
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+        );
+        return {
+          username,
+          lastMsg: sorted[0]?.text?.slice(0, 50) || "(no messages)",
+          lastTime: sorted[0]?.timestamp || "",
+          messages: sorted,
+        };
+      },
+    );
+    convList.sort(
+      (a, b) => new Date(b.lastTime).getTime() - new Date(a.lastTime).getTime(),
+    );
+    setConversations(convList);
+    setLastRefresh(new Date());
+  }, []);
+
+  React.useEffect(() => {
+    loadConversations();
+  }, [loadConversations]);
+
+  const selectedConv = conversations.find((c) => c.username === selectedUser);
+
+  const sendMessage = () => {
+    if (!newMessage.trim() || !selectedUser) return;
+    const msg: InboxMsg = {
+      id: `admin_${Date.now()}`,
+      from: "CHINNUA_POET",
+      to: selectedUser,
+      text: newMessage.trim(),
+      timestamp: new Date().toISOString(),
+    };
+    const key = `chinnua_conv_CHINNUA_POET_${selectedUser}`;
+    try {
+      const existing: InboxMsg[] = JSON.parse(
+        localStorage.getItem(key) || "[]",
+      );
+      existing.push(msg);
+      localStorage.setItem(key, JSON.stringify(existing));
+    } catch {
+      localStorage.setItem(key, JSON.stringify([msg]));
+    }
+    setNewMessage("");
+    loadConversations();
+  };
+
+  const startNewConversation = () => {
+    if (!newConvUsername.trim()) return;
+    const username = newConvUsername.trim();
+    setSelectedUser(username);
+    setShowNewConv(false);
+    setNewConvUsername("");
+    // Ensure conversation entry exists
+    if (!conversations.find((c) => c.username === username)) {
+      setConversations((prev) => [
+        { username, lastMsg: "(no messages)", lastTime: "", messages: [] },
+        ...prev,
+      ]);
+    }
+  };
+
+  return (
+    <div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: "1rem",
+        }}
+      >
+        <h3
+          style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            color: WARM_MOCHA,
+            margin: 0,
+          }}
+        >
+          Admin Inbox
+        </h3>
+        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <span
+            style={{
+              fontFamily: "'Lora', Georgia, serif",
+              fontSize: "0.72rem",
+              color: WARM_BROWN,
+              fontStyle: "italic",
+            }}
+          >
+            Updated: {lastRefresh.toLocaleTimeString()}
+          </span>
+          <button
+            type="button"
+            onClick={loadConversations}
+            data-ocid="admin.secondary_button"
+            style={{
+              padding: "0.3rem 0.75rem",
+              background: "rgba(212,168,83,0.1)",
+              border: "1px solid rgba(212,168,83,0.3)",
+              borderRadius: 6,
+              cursor: "pointer",
+              fontFamily: "'Lora', Georgia, serif",
+              fontSize: "0.75rem",
+              color: WARM_MOCHA,
+            }}
+          >
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: "1rem", minHeight: 500 }}>
+        {/* Left panel: conversation list */}
+        <div
+          style={{
+            width: "33%",
+            minWidth: 160,
+            background: WARM_PAPER,
+            border: `1px solid ${WARM_BORDER}`,
+            borderRadius: 12,
+            overflow: "hidden",
+            display: "flex",
+            flexDirection: "column",
+          }}
+          data-ocid="admin.panel"
+        >
+          <div
+            style={{
+              padding: "0.75rem",
+              borderBottom: `1px solid ${WARM_BORDER}`,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setShowNewConv(!showNewConv)}
+              data-ocid="admin.primary_button"
+              style={{
+                width: "100%",
+                padding: "0.4rem 0.75rem",
+                background: "rgba(212,168,83,0.15)",
+                border: "1px solid rgba(212,168,83,0.35)",
+                borderRadius: 8,
+                cursor: "pointer",
+                fontFamily: "'Lora', Georgia, serif",
+                fontSize: "0.8rem",
+                color: WARM_MOCHA,
+                fontWeight: 600,
+              }}
+            >
+              + Message User
+            </button>
+            {showNewConv && (
+              <div
+                style={{ marginTop: "0.5rem", display: "flex", gap: "0.4rem" }}
+              >
+                <input
+                  value={newConvUsername}
+                  onChange={(e) => setNewConvUsername(e.target.value)}
+                  placeholder="Username…"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") startNewConversation();
+                  }}
+                  data-ocid="admin.input"
+                  style={{
+                    flex: 1,
+                    padding: "0.35rem 0.5rem",
+                    border: `1px solid ${WARM_BORDER}`,
+                    borderRadius: 6,
+                    fontFamily: "'Lora', Georgia, serif",
+                    fontSize: "0.78rem",
+                    color: WARM_TEXT,
+                    background: "white",
+                    outline: "none",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={startNewConversation}
+                  data-ocid="admin.confirm_button"
+                  style={{
+                    padding: "0.35rem 0.6rem",
+                    background: WARM_GOLD,
+                    border: "none",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    fontSize: "0.75rem",
+                    color: "#3D2B1F",
+                    fontWeight: 600,
+                  }}
+                >
+                  Go
+                </button>
+              </div>
+            )}
+          </div>
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            {conversations.length === 0 ? (
+              <p
+                data-ocid="admin.empty_state"
+                style={{
+                  padding: "1.5rem",
+                  textAlign: "center",
+                  fontFamily: "'Lora', Georgia, serif",
+                  fontStyle: "italic",
+                  fontSize: "0.8rem",
+                  color: WARM_BROWN,
+                }}
+              >
+                No conversations yet
+              </p>
+            ) : (
+              conversations.map((conv) => (
+                <button
+                  key={conv.username}
+                  type="button"
+                  onClick={() => setSelectedUser(conv.username)}
+                  data-ocid="admin.row"
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem 1rem",
+                    background:
+                      selectedUser === conv.username
+                        ? "rgba(212,168,83,0.12)"
+                        : "transparent",
+                    borderLeft:
+                      selectedUser === conv.username
+                        ? `3px solid ${WARM_GOLD}`
+                        : "3px solid transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    borderBottom: `1px solid ${WARM_BORDER}`,
+                    transition: "all 0.15s",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: "'Playfair Display', Georgia, serif",
+                      fontWeight: 700,
+                      color: WARM_MOCHA,
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    @{conv.username}
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: "'Lora', Georgia, serif",
+                      fontSize: "0.72rem",
+                      color: WARM_BROWN,
+                      marginTop: "0.15rem",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {conv.lastMsg}
+                  </div>
+                  {conv.lastTime && (
+                    <div
+                      style={{
+                        fontFamily: "'Lora', Georgia, serif",
+                        fontSize: "0.65rem",
+                        color: "rgba(61,43,31,0.4)",
+                        marginTop: "0.1rem",
+                      }}
+                    >
+                      {new Date(conv.lastTime).toLocaleDateString()}
+                    </div>
+                  )}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Right panel: conversation thread */}
+        <div
+          style={{
+            flex: 1,
+            background: WARM_PAPER,
+            border: `1px solid ${WARM_BORDER}`,
+            borderRadius: 12,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+          }}
+          data-ocid="admin.panel"
+        >
+          {selectedUser ? (
+            <>
+              {/* Thread header */}
+              <div
+                style={{
+                  padding: "0.75rem 1.25rem",
+                  borderBottom: `1px solid ${WARM_BORDER}`,
+                  background: "rgba(212,168,83,0.06)",
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: "'Playfair Display', Georgia, serif",
+                    fontWeight: 700,
+                    color: WARM_MOCHA,
+                    fontSize: "0.95rem",
+                  }}
+                >
+                  Conversation with @{selectedUser}
+                </span>
+              </div>
+
+              {/* Messages */}
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: "auto",
+                  padding: "1rem",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.6rem",
+                }}
+              >
+                {!selectedConv || selectedConv.messages.length === 0 ? (
+                  <p
+                    data-ocid="admin.empty_state"
+                    style={{
+                      textAlign: "center",
+                      fontFamily: "'Lora', Georgia, serif",
+                      fontStyle: "italic",
+                      color: WARM_BROWN,
+                      fontSize: "0.85rem",
+                      marginTop: "2rem",
+                    }}
+                  >
+                    No messages yet. Send the first message below.
+                  </p>
+                ) : (
+                  [...(selectedConv?.messages || [])].reverse().map((m, i) => {
+                    const isAdmin = m.from === "CHINNUA_POET";
+                    return (
+                      <div
+                        key={m.id || i}
+                        data-ocid={`admin.item.${i + 1}`}
+                        style={{
+                          display: "flex",
+                          justifyContent: isAdmin ? "flex-end" : "flex-start",
+                        }}
+                      >
+                        <div
+                          style={{
+                            maxWidth: "70%",
+                            background: isAdmin
+                              ? "rgba(212,168,83,0.2)"
+                              : "rgba(255,248,238,0.9)",
+                            border: `1px solid ${isAdmin ? "rgba(212,168,83,0.4)" : WARM_BORDER}`,
+                            borderRadius: isAdmin
+                              ? "12px 12px 2px 12px"
+                              : "12px 12px 12px 2px",
+                            padding: "0.6rem 0.9rem",
+                          }}
+                        >
+                          <p
+                            style={{
+                              fontFamily: "'Libre Baskerville', Georgia, serif",
+                              fontSize: "0.85rem",
+                              color: WARM_TEXT,
+                              margin: 0,
+                              lineHeight: 1.5,
+                            }}
+                          >
+                            {m.text}
+                          </p>
+                          <p
+                            style={{
+                              fontFamily: "'Lora', Georgia, serif",
+                              fontSize: "0.65rem",
+                              color: "rgba(61,43,31,0.4)",
+                              margin: "0.25rem 0 0",
+                              textAlign: isAdmin ? "right" : "left",
+                            }}
+                          >
+                            {new Date(m.timestamp).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Compose area */}
+              <div
+                style={{
+                  padding: "0.75rem 1rem",
+                  borderTop: `1px solid ${WARM_BORDER}`,
+                  display: "flex",
+                  gap: "0.5rem",
+                }}
+              >
+                <input
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="Write a message…"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
+                  data-ocid="admin.input"
+                  style={{
+                    flex: 1,
+                    padding: "0.5rem 0.75rem",
+                    border: `1px solid ${WARM_BORDER}`,
+                    borderRadius: 8,
+                    fontFamily: "'Libre Baskerville', Georgia, serif",
+                    fontSize: "0.85rem",
+                    color: WARM_TEXT,
+                    background: "white",
+                    outline: "none",
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={sendMessage}
+                  data-ocid="admin.primary_button"
+                  style={{
+                    padding: "0.5rem 1rem",
+                    background: WARM_GOLD,
+                    border: "none",
+                    borderRadius: 8,
+                    cursor: "pointer",
+                    fontFamily: "'Lora', Georgia, serif",
+                    fontSize: "0.85rem",
+                    color: "#3D2B1F",
+                    fontWeight: 600,
+                    flexShrink: 0,
+                  }}
+                >
+                  Send
+                </button>
+              </div>
+            </>
+          ) : (
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <div style={{ textAlign: "center" }}>
+                <p
+                  style={{
+                    fontFamily: "'Playfair Display', Georgia, serif",
+                    fontStyle: "italic",
+                    color: WARM_BROWN,
+                    fontSize: "1rem",
+                  }}
+                >
+                  Select a conversation
+                </p>
+                <p
+                  style={{
+                    fontFamily: "'Lora', Georgia, serif",
+                    fontSize: "0.8rem",
+                    color: "rgba(61,43,31,0.4)",
+                  }}
+                >
+                  or start a new one with "+ Message User"
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminInfoTab() {
+  const WARM_MOCHA = "#5C3D2E";
+  const WARM_BROWN = "#8B6F47";
+  const WARM_PAPER = "#F5ECD7";
+  const WARM_BORDER = "rgba(139,111,71,0.25)";
+  const WARM_GOLD = "#D4A853";
+  const WARM_TEXT = "#3D2B1F";
+
+  interface AdminProfile {
+    username: string;
+    displayName: string;
+    email: string;
+    bio: string;
+    profilePhoto: string;
+    websiteUrl: string;
+    memberSince: string;
+  }
+
+  const DEFAULT_PROFILE: AdminProfile = {
+    username: "CHINNUA_POET",
+    displayName: "CHINNUA_POET",
+    email: "anoldpoet07@gmail.com",
+    bio: "The poet behind CHINNUA_POET",
+    profilePhoto: "",
+    websiteUrl: window.location.origin,
+    memberSince: "2025",
+  };
+
+  const [profile, setProfile] = React.useState<AdminProfile>(() => {
+    try {
+      const stored = localStorage.getItem("chinnua_admin_profile");
+      if (stored) return { ...DEFAULT_PROFILE, ...JSON.parse(stored) };
+    } catch {}
+    return DEFAULT_PROFILE;
+  });
+
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [newPassword, setNewPassword] = React.useState("");
+  const [savedOk, setSavedOk] = React.useState(false);
+
+  const currentPassword =
+    localStorage.getItem("chinnua_admin_password") || "chinnua2025";
+
+  const handleSave = () => {
+    localStorage.setItem("chinnua_admin_profile", JSON.stringify(profile));
+    if (newPassword.trim()) {
+      localStorage.setItem("chinnua_admin_password", newPassword.trim());
+      setNewPassword("");
+    }
+    setSavedOk(true);
+    setTimeout(() => setSavedOk(false), 2000);
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "0.55rem 0.85rem",
+    border: `1px solid ${WARM_BORDER}`,
+    borderRadius: 8,
+    fontFamily: "'Libre Baskerville', Georgia, serif",
+    fontSize: "0.85rem",
+    color: WARM_TEXT,
+    background: "rgba(255,248,238,0.9)",
+    outline: "none",
+    boxSizing: "border-box",
+  };
+
+  const fieldStyle: React.CSSProperties = {
+    marginBottom: "1rem",
+  };
+
+  const labelStyle: React.CSSProperties = {
+    display: "block",
+    fontFamily: "'Playfair Display', Georgia, serif",
+    fontSize: "0.78rem",
+    color: WARM_MOCHA,
+    fontWeight: 700,
+    marginBottom: "0.35rem",
+    letterSpacing: "0.04em",
+  };
+
+  return (
+    <div>
+      <h3
+        style={{
+          fontFamily: "'Playfair Display', Georgia, serif",
+          color: WARM_MOCHA,
+          marginBottom: "0.35rem",
+          fontSize: "1.2rem",
+        }}
+      >
+        Admin Profile
+      </h3>
+      <p
+        style={{
+          fontFamily: "'Lora', Georgia, serif",
+          fontStyle: "italic",
+          color: WARM_BROWN,
+          fontSize: "0.82rem",
+          marginBottom: "1.5rem",
+        }}
+      >
+        Your admin account information. Changes are saved locally.
+      </p>
+
+      <div
+        style={{
+          background: WARM_PAPER,
+          border: `1px solid ${WARM_BORDER}`,
+          borderRadius: 14,
+          padding: "1.5rem",
+          maxWidth: 560,
+        }}
+      >
+        {/* Read-only info row */}
+        <div
+          style={{
+            display: "flex",
+            gap: "1.5rem",
+            marginBottom: "1.5rem",
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+          }}
+        >
+          <div
+            style={{
+              width: 72,
+              height: 72,
+              borderRadius: "50%",
+              background: "rgba(212,168,83,0.15)",
+              border: `2px solid ${WARM_GOLD}`,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              overflow: "hidden",
+            }}
+          >
+            {profile.profilePhoto ? (
+              <img
+                src={profile.profilePhoto}
+                alt="Admin"
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            ) : (
+              <span
+                style={{
+                  fontFamily: "'Playfair Display', serif",
+                  fontSize: "1.8rem",
+                  color: WARM_GOLD,
+                }}
+              >
+                ✒
+              </span>
+            )}
+          </div>
+          <div>
+            <p
+              style={{
+                fontFamily: "'Playfair Display', Georgia, serif",
+                fontSize: "1.1rem",
+                fontWeight: 700,
+                color: WARM_MOCHA,
+                margin: "0 0 0.2rem",
+              }}
+            >
+              {profile.displayName}
+            </p>
+            <p
+              style={{
+                fontFamily: "'Lora', Georgia, serif",
+                fontSize: "0.8rem",
+                color: WARM_BROWN,
+                margin: "0 0 0.15rem",
+              }}
+            >
+              @{profile.username}
+            </p>
+            <p
+              style={{
+                fontFamily: "'Lora', Georgia, serif",
+                fontSize: "0.75rem",
+                color: "rgba(61,43,31,0.5)",
+                margin: 0,
+              }}
+            >
+              Member since {profile.memberSince}
+            </p>
+          </div>
+        </div>
+
+        {/* Editable fields */}
+        <div style={fieldStyle}>
+          <label htmlFor="admin-username" style={labelStyle}>
+            Admin Username
+          </label>
+          <input
+            id="admin-username"
+            value={profile.username}
+            onChange={(e) =>
+              setProfile((p) => ({ ...p, username: e.target.value }))
+            }
+            style={inputStyle}
+            data-ocid="admin.input"
+          />
+        </div>
+
+        <div style={fieldStyle}>
+          <label htmlFor="admin-display-name" style={labelStyle}>
+            Display Name
+          </label>
+          <input
+            id="admin-display-name"
+            value={profile.displayName}
+            onChange={(e) =>
+              setProfile((p) => ({ ...p, displayName: e.target.value }))
+            }
+            style={inputStyle}
+            data-ocid="admin.input"
+          />
+        </div>
+
+        <div style={fieldStyle}>
+          <label htmlFor="admin-email" style={labelStyle}>
+            Admin Email
+          </label>
+          <input
+            id="admin-email"
+            type="email"
+            value={profile.email}
+            onChange={(e) =>
+              setProfile((p) => ({ ...p, email: e.target.value }))
+            }
+            style={inputStyle}
+            data-ocid="admin.input"
+          />
+        </div>
+
+        <div style={fieldStyle}>
+          <label htmlFor="admin-bio" style={labelStyle}>
+            Bio
+          </label>
+          <textarea
+            id="admin-bio"
+            value={profile.bio}
+            onChange={(e) => setProfile((p) => ({ ...p, bio: e.target.value }))}
+            rows={3}
+            style={{ ...inputStyle, resize: "vertical" }}
+            data-ocid="admin.textarea"
+          />
+        </div>
+
+        {/* Read-only fields */}
+        <div
+          style={{
+            ...fieldStyle,
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "1rem",
+          }}
+        >
+          <div>
+            <label htmlFor="admin-website-url" style={labelStyle}>
+              Website URL (read-only)
+            </label>
+            <input
+              id="admin-website-url"
+              value={profile.websiteUrl}
+              readOnly
+              style={{ ...inputStyle, opacity: 0.6, cursor: "default" }}
+            />
+          </div>
+          <div>
+            <label htmlFor="admin-member-since" style={labelStyle}>
+              Member Since (read-only)
+            </label>
+            <input
+              id="admin-member-since"
+              value={profile.memberSince}
+              readOnly
+              style={{ ...inputStyle, opacity: 0.6, cursor: "default" }}
+            />
+          </div>
+        </div>
+
+        {/* Profile photo path */}
+        <div style={fieldStyle}>
+          <label htmlFor="admin-photo" style={labelStyle}>
+            Profile Photo URL (read-only)
+          </label>
+          <input
+            id="admin-photo"
+            value={profile.profilePhoto || "(none)"}
+            readOnly
+            style={{ ...inputStyle, opacity: 0.6, cursor: "default" }}
+          />
+        </div>
+
+        {/* Password section */}
+        <div
+          style={{
+            background: "rgba(212,168,83,0.06)",
+            border: "1px solid rgba(212,168,83,0.2)",
+            borderRadius: 10,
+            padding: "1rem",
+            marginBottom: "1.25rem",
+          }}
+        >
+          <label htmlFor="admin-pw-display" style={labelStyle}>
+            Admin Password
+          </label>
+          <div
+            style={{
+              display: "flex",
+              gap: "0.5rem",
+              alignItems: "center",
+              marginBottom: "0.5rem",
+            }}
+          >
+            <input
+              id="admin-pw-display"
+              type={showPassword ? "text" : "password"}
+              value={currentPassword}
+              readOnly
+              style={{
+                ...inputStyle,
+                opacity: 0.7,
+                cursor: "default",
+                flex: 1,
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((p) => !p)}
+              style={{
+                padding: "0.4rem 0.7rem",
+                background: "rgba(139,111,71,0.1)",
+                border: `1px solid ${WARM_BORDER}`,
+                borderRadius: 6,
+                cursor: "pointer",
+                color: WARM_BROWN,
+                fontSize: "0.78rem",
+                fontFamily: "'Lora', Georgia, serif",
+                flexShrink: 0,
+              }}
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
+          </div>
+          <input
+            type="password"
+            placeholder="New password (leave blank to keep current)"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            style={inputStyle}
+            data-ocid="admin.input"
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={handleSave}
+          data-ocid="admin.save_button"
+          style={{
+            padding: "0.6rem 1.75rem",
+            background: savedOk
+              ? "rgba(74,222,128,0.15)"
+              : "rgba(212,168,83,0.85)",
+            border: "none",
+            borderRadius: 8,
+            cursor: "pointer",
+            fontFamily: "'Libre Baskerville', Georgia, serif",
+            fontSize: "0.88rem",
+            color: "#3D2B1F",
+            fontWeight: 700,
+            transition: "all 0.2s",
+            boxShadow: "0 2px 8px rgba(212,168,83,0.2)",
+          }}
+        >
+          {savedOk ? "Saved!" : "Save Profile"}
+        </button>
+      </div>
+
+      {/* Stats section */}
+      <div
+        style={{
+          marginTop: "1.5rem",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+          gap: "0.75rem",
+          maxWidth: 560,
+        }}
+      >
+        {[
+          { label: "Platform", value: "CHINNUA_POET" },
+          { label: "Contact", value: "anoldpoet07@gmail.com" },
+          { label: "YouTube", value: "ChinnuaPoetofficial" },
+          { label: "X / Twitter", value: "@CHINNUA_POET" },
+        ].map((item) => (
+          <div
+            key={item.label}
+            style={{
+              background: WARM_PAPER,
+              border: `1px solid ${WARM_BORDER}`,
+              borderRadius: 10,
+              padding: "0.8rem 1rem",
+            }}
+          >
+            <p
+              style={{
+                fontFamily: "'Playfair Display', Georgia, serif",
+                fontSize: "0.7rem",
+                color: WARM_BROWN,
+                margin: "0 0 0.2rem",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+              }}
+            >
+              {item.label}
+            </p>
+            <p
+              style={{
+                fontFamily: "'Libre Baskerville', Georgia, serif",
+                fontSize: "0.82rem",
+                color: WARM_MOCHA,
+                margin: 0,
+                fontWeight: 600,
+                wordBreak: "break-all",
+              }}
+            >
+              {item.value}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function UsersTab({
+  users,
+  onDeleteUser,
+}: { users: UserEntry[]; onDeleteUser: (username: string) => void }) {
+  const WARM_MOCHA = "#5C3D2E";
+  const WARM_BROWN = "#8B6F47";
+  const _WARM_PAPER = "#F5ECD7";
+  const WARM_BORDER = "rgba(139,111,71,0.25)";
+  const WARM_TEXT = "#3D2B1F";
+  const _WARM_GOLD = "#D4A853";
+
+  const [search, setSearch] = React.useState("");
+
+  const filtered = users.filter((u) => {
+    const q = search.toLowerCase();
+    return (
+      u.username.toLowerCase().includes(q) ||
+      (u.email || "").toLowerCase().includes(q) ||
+      (u.name || u.displayName || "").toLowerCase().includes(q)
+    );
+  });
+
+  const formatDate = (val?: string) => {
+    if (!val) return "—";
+    try {
+      return new Date(val).toLocaleDateString();
+    } catch {
+      return val;
+    }
+  };
+
+  return (
+    <div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: "1rem",
+          gap: "1rem",
+          flexWrap: "wrap",
+        }}
+      >
+        <p
+          style={{
+            fontFamily: "'Lora', Georgia, serif",
+            fontStyle: "italic",
+            color: WARM_BROWN,
+            fontSize: "0.82rem",
+            margin: 0,
+          }}
+        >
+          {users.length} registered user{users.length !== 1 ? "s" : ""}
+        </p>
+        <input
+          type="search"
+          placeholder="Search by username or email…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          data-ocid="admin.search_input"
+          style={{
+            padding: "0.4rem 0.75rem",
+            border: `1px solid ${WARM_BORDER}`,
+            borderRadius: 8,
+            fontFamily: "'Lora', Georgia, serif",
+            fontSize: "0.82rem",
+            color: WARM_TEXT,
+            background: "white",
+            outline: "none",
+            minWidth: 220,
+          }}
+        />
+      </div>
+
+      {filtered.length === 0 ? (
+        <div
+          data-ocid="admin.empty_state"
+          style={{
+            textAlign: "center",
+            padding: "2rem",
+            fontFamily: "'Lora', Georgia, serif",
+            fontStyle: "italic",
+            color: WARM_BROWN,
+          }}
+        >
+          No users found
+        </div>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              fontFamily: "'Libre Baskerville', Georgia, serif",
+            }}
+          >
+            <thead>
+              <tr
+                style={{
+                  background: "rgba(212,168,83,0.08)",
+                  borderBottom: `2px solid ${WARM_BORDER}`,
+                }}
+              >
+                {[
+                  "Username",
+                  "Name",
+                  "Email",
+                  "Phone",
+                  "Joined",
+                  "Actions",
+                ].map((col) => (
+                  <th
+                    key={col}
+                    style={{
+                      padding: "0.6rem 0.9rem",
+                      textAlign: "left",
+                      fontFamily: "'Playfair Display', Georgia, serif",
+                      fontSize: "0.78rem",
+                      color: WARM_MOCHA,
+                      fontWeight: 700,
+                      letterSpacing: "0.05em",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {col}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((user, i) => (
+                <tr
+                  key={user.username}
+                  data-ocid={`admin.item.${i + 1}`}
+                  style={{
+                    borderBottom: `1px solid ${WARM_BORDER}`,
+                    background:
+                      i % 2 === 0 ? "transparent" : "rgba(212,168,83,0.04)",
+                  }}
+                >
+                  <td style={{ padding: "0.6rem 0.9rem" }}>
+                    <span
+                      style={{
+                        fontWeight: 700,
+                        color: WARM_MOCHA,
+                        fontSize: "0.88rem",
+                      }}
+                    >
+                      @{user.username}
+                    </span>
+                  </td>
+                  <td
+                    style={{
+                      padding: "0.6rem 0.9rem",
+                      fontSize: "0.82rem",
+                      color: WARM_TEXT,
+                    }}
+                  >
+                    {user.name || user.displayName || "—"}
+                  </td>
+                  <td
+                    style={{
+                      padding: "0.6rem 0.9rem",
+                      fontSize: "0.82rem",
+                      color: WARM_TEXT,
+                    }}
+                  >
+                    {user.email || "—"}
+                  </td>
+                  <td
+                    style={{
+                      padding: "0.6rem 0.9rem",
+                      fontSize: "0.82rem",
+                      color: WARM_TEXT,
+                    }}
+                  >
+                    {user.phone || "—"}
+                  </td>
+                  <td
+                    style={{
+                      padding: "0.6rem 0.9rem",
+                      fontSize: "0.78rem",
+                      color: WARM_BROWN,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {formatDate(user.createdAt || user.joinedAt)}
+                  </td>
+                  <td style={{ padding: "0.6rem 0.9rem" }}>
+                    <button
+                      type="button"
+                      onClick={() => onDeleteUser(user.username)}
+                      data-ocid="admin.delete_button"
+                      style={{
+                        padding: "0.25rem 0.65rem",
+                        background: "rgba(239,68,68,0.1)",
+                        border: "1px solid rgba(239,68,68,0.25)",
+                        borderRadius: 6,
+                        cursor: "pointer",
+                        fontFamily: "'Libre Baskerville', Georgia, serif",
+                        fontSize: "0.75rem",
+                        color: "rgba(239,68,68,0.85)",
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AdminAboutTab() {
+  const WARM_MOCHA = "#5C3D2E";
+  const WARM_BROWN = "#8B6F47";
+  const WARM_PAPER = "#F5ECD7";
+  const WARM_BORDER = "rgba(139,111,71,0.25)";
+  const WARM_TEXT = "#3D2B1F";
+
+  const [bio, setBio] = React.useState("");
+  const [story, setStory] = React.useState("");
+  const [saved, setSaved] = React.useState(false);
+
+  React.useEffect(() => {
+    try {
+      const about = JSON.parse(
+        localStorage.getItem("chinnua_about_content") || "{}",
+      );
+      setBio(about.bio || "");
+      setStory(about.story || "");
+    } catch {}
+  }, []);
+
+  const handleDocUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      // Parse the document: first paragraph = bio, rest = story
+      const lines = text.split("\n").filter((l) => l.trim());
+      const bioText = lines.slice(0, 3).join(" ");
+      const storyText = lines.slice(3).join("\n");
+      setBio(bioText);
+      setStory(storyText);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleSave = () => {
+    const about = { bio, story, poetName: "CHINNUA_POET" };
+    localStorage.setItem("chinnua_about_content", JSON.stringify(about));
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+
+  return (
+    <div>
+      <h3
+        style={{
+          fontFamily: "'Playfair Display', Georgia, serif",
+          color: WARM_MOCHA,
+          marginBottom: "1rem",
+        }}
+      >
+        About Page Editor
+      </h3>
+
+      {/* Document Upload */}
+      <div
+        style={{
+          background: WARM_PAPER,
+          border: `1px solid ${WARM_BORDER}`,
+          borderRadius: 10,
+          padding: "1rem 1.25rem",
+          marginBottom: "1.5rem",
+        }}
+      >
+        <p
+          style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            color: WARM_MOCHA,
+            fontWeight: 600,
+            marginBottom: "0.5rem",
+            fontSize: "0.88rem",
+          }}
+        >
+          Upload Document (.txt)
+        </p>
+        <p
+          style={{
+            fontFamily: "'Lora', Georgia, serif",
+            fontStyle: "italic",
+            fontSize: "0.78rem",
+            color: WARM_BROWN,
+            marginBottom: "0.75rem",
+          }}
+        >
+          Upload a text file to auto-populate the About page with its content.
+        </p>
+        <input
+          type="file"
+          accept=".txt"
+          data-ocid="admin.upload_button"
+          onChange={handleDocUpload}
+          style={{
+            fontFamily: "'Lora', Georgia, serif",
+            fontSize: "0.8rem",
+            color: WARM_TEXT,
+          }}
+        />
+      </div>
+
+      {/* Bio */}
+      <div style={{ marginBottom: "1.25rem" }}>
+        <div
+          style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            color: WARM_MOCHA,
+            fontSize: "0.88rem",
+            fontWeight: 600,
+            display: "block",
+            marginBottom: "0.5rem",
+          }}
+        >
+          Bio
+        </div>
+        <textarea
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
+          rows={4}
+          data-ocid="admin.textarea"
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            border: `1px solid ${WARM_BORDER}`,
+            borderRadius: 8,
+            fontFamily: "'Libre Baskerville', Georgia, serif",
+            fontSize: "0.85rem",
+            color: WARM_TEXT,
+            background: WARM_PAPER,
+            resize: "vertical",
+            outline: "none",
+          }}
+        />
+      </div>
+
+      {/* Story */}
+      <div style={{ marginBottom: "1.5rem" }}>
+        <div
+          style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            color: WARM_MOCHA,
+            fontSize: "0.88rem",
+            fontWeight: 600,
+            display: "block",
+            marginBottom: "0.5rem",
+          }}
+        >
+          Full Story / About Content
+        </div>
+        <textarea
+          value={story}
+          onChange={(e) => setStory(e.target.value)}
+          rows={10}
+          data-ocid="admin.textarea"
+          style={{
+            width: "100%",
+            padding: "0.75rem",
+            border: `1px solid ${WARM_BORDER}`,
+            borderRadius: 8,
+            fontFamily: "'Libre Baskerville', Georgia, serif",
+            fontSize: "0.85rem",
+            color: WARM_TEXT,
+            background: WARM_PAPER,
+            resize: "vertical",
+            outline: "none",
+          }}
+        />
+      </div>
+
+      <button
+        type="button"
+        onClick={handleSave}
+        data-ocid="admin.save_button"
+        style={{
+          background: saved ? "rgba(92,180,92,0.15)" : "rgba(212,168,83,0.85)",
+          border: "none",
+          borderRadius: 8,
+          padding: "0.6rem 1.5rem",
+          cursor: "pointer",
+          fontFamily: "'Libre Baskerville', Georgia, serif",
+          fontSize: "0.85rem",
+          color: "#3D2B1F",
+          fontWeight: 600,
+          transition: "all 0.2s",
+        }}
+      >
+        {saved ? "Saved!" : "Save About Content"}
+      </button>
+    </div>
+  );
+}
+
+function ensureAdminFollowed() {
+  try {
+    const users: Array<{ username: string }> = JSON.parse(
+      localStorage.getItem("chinnua_users") || "[]",
+    );
+    for (const user of users) {
+      const key = `chinnua_following_${user.username}`;
+      const following: string[] = JSON.parse(localStorage.getItem(key) || "[]");
+      if (!following.includes("CHINNUA_POET")) {
+        following.push("CHINNUA_POET");
+        localStorage.setItem(key, JSON.stringify(following));
+      }
+    }
+  } catch {}
+}
+
 export default function AdminSlide() {
   const [authed, setAuthed] = useState(false);
   const [password, setPassword] = useState("");
@@ -591,6 +2573,13 @@ export default function AdminSlide() {
   const [gallery, setGallery] = useState<GalleryPhoto[]>([]);
   const [newPassword, setNewPassword] = useState("");
   const [announcement, setAnnouncement] = useState("");
+  const [showNewPoemModal, setShowNewPoemModal] = useState(false);
+  const [newPoemTitle, setNewPoemTitle] = useState("");
+  const [newPoemCategory, setNewPoemCategory] = useState("Identity");
+  const [newPoemText, setNewPoemText] = useState("");
+  const [newPoemImageUrl, setNewPoemImageUrl] = useState("");
+  const [twoFAStep, setTwoFAStep] = useState(false);
+  const [twoFAInput, setTwoFAInput] = useState("");
   const [rules, setRules] = useState(
     "1. Be respectful to all community members.\n2. No hate speech or harassment.\n3. Share only original content or give proper credit.\n4. Keep discussions poetry-related.\n5. No spam or promotional content.\n6. Respect privacy of others.",
   );
@@ -675,26 +2664,84 @@ export default function AdminSlide() {
     if (storedRules) setRules(storedRules);
   }, []);
 
+  // Auto-follow admin when authed
+  useEffect(() => {
+    if (authed) {
+      ensureAdminFollowed();
+    }
+  }, [authed]);
+
   const checkPassword = async () => {
+    let passwordOk = false;
     try {
       if (actor) {
         const ok = await (actor as any).checkAdminPassword(password);
-        if (ok) {
-          setAuthed(true);
-          localStorage.setItem("chinnua_admin_authed", "true");
-        } else {
+        if (ok) passwordOk = true;
+        else {
           toast.error("Incorrect password");
+          return;
         }
+      } else {
+        if (password === "chinnua2025") passwordOk = true;
+        else {
+          toast.error("Incorrect password");
+          return;
+        }
+      }
+    } catch {
+      if (password === "chinnua2025") passwordOk = true;
+      else {
+        toast.error("Incorrect password");
         return;
       }
-    } catch {}
-    // Fallback: always use default password, never stale localStorage
-    if (password === "chinnua2025") {
+    }
+
+    if (passwordOk) {
+      const storedCode = localStorage.getItem("chinnua_2fa_code");
+      if (storedCode) {
+        setTwoFAStep(true);
+      } else {
+        setAuthed(true);
+        localStorage.setItem("chinnua_admin_authed", "true");
+      }
+    }
+  };
+
+  const checkTwoFA = () => {
+    const storedCode = localStorage.getItem("chinnua_2fa_code");
+    if (twoFAInput === storedCode) {
       setAuthed(true);
+      setTwoFAStep(false);
       localStorage.setItem("chinnua_admin_authed", "true");
     } else {
-      toast.error("Incorrect password");
+      toast.error("Invalid 2FA code");
     }
+  };
+
+  const publishNewPoem = () => {
+    if (!newPoemTitle.trim() || !newPoemText.trim()) {
+      toast.error("Title and poem text are required");
+      return;
+    }
+    const customPoems = JSON.parse(
+      localStorage.getItem("chinnua_custom_poems") || "[]",
+    );
+    const newPoem = {
+      id: `custom_${Date.now()}`,
+      title: newPoemTitle.trim(),
+      category: newPoemCategory,
+      full: newPoemText.trim(),
+      imageUrl: newPoemImageUrl.trim() || null,
+      author: "CHINNUA_POET",
+      timestamp: new Date().toISOString(),
+    };
+    customPoems.unshift(newPoem);
+    localStorage.setItem("chinnua_custom_poems", JSON.stringify(customPoems));
+    setNewPoemTitle("");
+    setNewPoemText("");
+    setNewPoemImageUrl("");
+    setShowNewPoemModal(false);
+    toast.success("Poem published successfully");
   };
 
   const emergencyReset = () => {
@@ -757,11 +2804,11 @@ export default function AdminSlide() {
   };
 
   const inputStyle = {
-    background: "rgba(255,255,255,0.05)",
-    border: "1px solid rgba(200,169,106,0.2)",
+    background: "rgba(255,248,238,0.9)",
+    border: "1px solid rgba(139,111,71,0.3)",
     borderRadius: 8,
     padding: "0.6rem 0.9rem",
-    color: "#F5E6D3",
+    color: "#3D2B1F",
     fontFamily: "'Libre Baskerville', Georgia, serif",
     fontSize: "0.9rem",
     outline: "none",
@@ -804,7 +2851,7 @@ export default function AdminSlide() {
             style={{
               fontFamily: "'Playfair Display', Georgia, serif",
               fontSize: "1.4rem",
-              color: "#F5E6D3",
+              color: "#3D2B1F",
               marginBottom: "0.5rem",
             }}
           >
@@ -812,7 +2859,7 @@ export default function AdminSlide() {
           </h2>
           <p
             style={{
-              color: "rgba(229,231,235,0.4)",
+              color: "rgba(92,61,46,0.5)",
               fontFamily: "'Libre Baskerville', Georgia, serif",
               fontSize: "0.85rem",
               marginBottom: "1.5rem",
@@ -843,7 +2890,7 @@ export default function AdminSlide() {
                 background: "none",
                 border: "none",
                 cursor: "pointer",
-                color: "rgba(229,231,235,0.5)",
+                color: "rgba(92,61,46,0.5)",
               }}
             >
               {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -856,7 +2903,7 @@ export default function AdminSlide() {
               width: "100%",
               background: "rgba(200,169,106,0.85)",
               border: "none",
-              color: "#fff",
+              color: "#3D2B1F",
             }}
           >
             Enter
@@ -868,7 +2915,7 @@ export default function AdminSlide() {
               marginTop: "0.5rem",
               background: "none",
               border: "none",
-              color: "rgba(200,169,106,0.6)",
+              color: "#8B6F47",
               fontSize: "0.75rem",
               cursor: "pointer",
               fontFamily: "'Libre Baskerville', Georgia, serif",
@@ -876,6 +2923,106 @@ export default function AdminSlide() {
             }}
           >
             Forgot password? Reset to default
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (twoFAStep) {
+    return (
+      <div
+        className="slide-container"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="feed-card"
+          style={{
+            padding: "2.5rem",
+            width: "100%",
+            maxWidth: 380,
+            textAlign: "center",
+          }}
+        >
+          <h2
+            style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              fontSize: "1.2rem",
+              color: WARM_TEXT,
+              marginBottom: "0.5rem",
+            }}
+          >
+            Two-Factor Authentication
+          </h2>
+          <p
+            style={{
+              color: WARM_MUTED,
+              fontFamily: "'Libre Baskerville', Georgia, serif",
+              fontSize: "0.85rem",
+              marginBottom: "1.5rem",
+            }}
+          >
+            Enter your 6-digit backup code
+          </p>
+          <input
+            type="text"
+            value={twoFAInput}
+            onChange={(e) => setTwoFAInput(e.target.value)}
+            placeholder="000000"
+            maxLength={6}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") checkTwoFA();
+            }}
+            style={{
+              background: "rgba(255,248,238,0.9)",
+              border: "1px solid rgba(139,111,71,0.3)",
+              borderRadius: 8,
+              padding: "0.6rem 0.9rem",
+              color: WARM_TEXT,
+              fontFamily: "'Libre Baskerville', Georgia, serif",
+              fontSize: "1.2rem",
+              outline: "none",
+              width: "100%",
+              letterSpacing: "0.3em",
+              textAlign: "center",
+              marginBottom: "1rem",
+              boxSizing: "border-box",
+            }}
+            data-ocid="admin.input"
+          />
+          <Button
+            onClick={checkTwoFA}
+            data-ocid="admin.submit_button"
+            style={{
+              width: "100%",
+              background: "rgba(200,169,106,0.85)",
+              border: "none",
+              color: WARM_TEXT,
+            }}
+          >
+            Verify
+          </Button>
+          <button
+            type="button"
+            onClick={() => setTwoFAStep(false)}
+            style={{
+              marginTop: "0.5rem",
+              background: "none",
+              border: "none",
+              color: WARM_BROWN,
+              fontSize: "0.75rem",
+              cursor: "pointer",
+              fontFamily: "'Libre Baskerville', Georgia, serif",
+              textDecoration: "underline",
+            }}
+          >
+            Back to password
           </button>
         </motion.div>
       </div>
@@ -904,7 +3051,7 @@ export default function AdminSlide() {
             style={{
               fontFamily: "'Playfair Display', Georgia, serif",
               fontSize: "1.6rem",
-              color: "#F5E6D3",
+              color: "#3D2B1F",
               fontWeight: 700,
             }}
           >
@@ -914,19 +3061,19 @@ export default function AdminSlide() {
             onClick={lockAdmin}
             data-ocid="admin.secondary_button"
             style={{
-              background: "rgba(255,255,255,0.06)",
+              background: "rgba(255,248,238,0.9)",
               border: "1px solid rgba(255,255,255,0.1)",
-              color: "rgba(229,231,235,0.7)",
+              color: "#8B6F47",
               fontSize: "0.82rem",
             }}
           >
             Lock
           </Button>
         </div>
-        <Tabs defaultValue="poems">
+        <Tabs defaultValue="admin-info">
           <TabsList
             style={{
-              background: "rgba(255,255,255,0.05)",
+              background: "rgba(255,248,238,0.9)",
               border: "1px solid rgba(200,169,106,0.15)",
               marginBottom: "1.5rem",
               display: "flex",
@@ -936,6 +3083,7 @@ export default function AdminSlide() {
             }}
           >
             {[
+              "admin-info",
               "poems",
               "feed",
               "users",
@@ -945,6 +3093,10 @@ export default function AdminSlide() {
               "guardian",
               "letters",
               "replies",
+              "ai-users",
+              "music",
+              "inbox",
+              "about",
             ].map((tab) => (
               <TabsTrigger
                 key={tab}
@@ -961,17 +3113,161 @@ export default function AdminSlide() {
             ))}
           </TabsList>
 
+          <TabsContent value="admin-info">
+            <AdminInfoTab />
+          </TabsContent>
+
           <TabsContent value="poems">
-            <p
+            <div
               style={{
-                color: "rgba(229,231,235,0.4)",
-                fontFamily: "'Libre Baskerville', Georgia, serif",
-                fontSize: "0.82rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
                 marginBottom: "1rem",
               }}
             >
-              {POEMS.length} poems · {deletedPoems.size} hidden
-            </p>
+              <p
+                style={{
+                  color: "rgba(92,61,46,0.5)",
+                  fontFamily: "'Libre Baskerville', Georgia, serif",
+                  fontSize: "0.82rem",
+                  margin: 0,
+                }}
+              >
+                {POEMS.length} poems · {deletedPoems.size} hidden
+              </p>
+              <Button
+                onClick={() => setShowNewPoemModal(true)}
+                data-ocid="admin.primary_button"
+                style={{
+                  background: "rgba(212,168,83,0.85)",
+                  border: "none",
+                  color: "#3D2B1F",
+                  fontFamily: "'Lora', serif",
+                  fontSize: "0.82rem",
+                }}
+              >
+                + Write New Poem
+              </Button>
+            </div>
+            {/* New Poem Modal */}
+            {showNewPoemModal && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  background: "rgba(0,0,0,0.4)",
+                  zIndex: 200,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: "1rem",
+                }}
+                data-ocid="admin.modal"
+              >
+                <motion.div
+                  initial={{ scale: 0.9 }}
+                  animate={{ scale: 1 }}
+                  style={{
+                    background: "#F5ECD7",
+                    borderRadius: 16,
+                    padding: "2rem",
+                    maxWidth: 520,
+                    width: "100%",
+                    maxHeight: "85vh",
+                    overflowY: "auto",
+                    boxShadow: "0 8px 40px rgba(0,0,0,0.2)",
+                  }}
+                >
+                  <h3
+                    style={{
+                      fontFamily: "'Playfair Display', serif",
+                      color: WARM_TEXT,
+                      fontSize: "1.2rem",
+                      marginBottom: "1.25rem",
+                    }}
+                  >
+                    Write New Poem
+                  </h3>
+                  <input
+                    value={newPoemTitle}
+                    onChange={(e) => setNewPoemTitle(e.target.value)}
+                    placeholder="Poem title"
+                    style={{ ...inputStyle, marginBottom: "0.75rem" }}
+                    data-ocid="admin.input"
+                  />
+                  <select
+                    value={newPoemCategory}
+                    onChange={(e) => setNewPoemCategory(e.target.value)}
+                    style={{ ...inputStyle, marginBottom: "0.75rem" }}
+                    data-ocid="admin.select"
+                  >
+                    {[
+                      "Sad",
+                      "Romantic",
+                      "Dark",
+                      "Hopeful",
+                      "Love",
+                      "Loss",
+                      "Nature",
+                      "Spiritual",
+                      "Identity",
+                      "Other",
+                    ].map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                  <Textarea
+                    value={newPoemText}
+                    onChange={(e) => setNewPoemText(e.target.value)}
+                    placeholder="Write your poem here…"
+                    rows={10}
+                    style={{
+                      ...inputStyle,
+                      resize: "vertical",
+                      marginBottom: "0.75rem",
+                    }}
+                    data-ocid="admin.textarea"
+                  />
+                  <input
+                    value={newPoemImageUrl}
+                    onChange={(e) => setNewPoemImageUrl(e.target.value)}
+                    placeholder="Optional image URL"
+                    style={{ ...inputStyle, marginBottom: "1rem" }}
+                  />
+                  <div style={{ display: "flex", gap: "0.75rem" }}>
+                    <Button
+                      onClick={publishNewPoem}
+                      data-ocid="admin.confirm_button"
+                      style={{
+                        flex: 1,
+                        background: "rgba(212,168,83,0.85)",
+                        border: "none",
+                        color: "#3D2B1F",
+                      }}
+                    >
+                      Publish Poem
+                    </Button>
+                    <Button
+                      onClick={() => setShowNewPoemModal(false)}
+                      data-ocid="admin.cancel_button"
+                      style={{
+                        flex: 1,
+                        background: "rgba(139,111,71,0.15)",
+                        border: "1px solid rgba(139,111,71,0.3)",
+                        color: WARM_TEXT,
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
             <div
               style={{
                 display: "flex",
@@ -997,7 +3293,7 @@ export default function AdminSlide() {
                     style={{
                       fontFamily: "'Libre Baskerville', Georgia, serif",
                       fontSize: "0.88rem",
-                      color: "#F5E6D3",
+                      color: "#3D2B1F",
                       flex: 1,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
@@ -1046,7 +3342,7 @@ export default function AdminSlide() {
               {feedPosts.length === 0 ? (
                 <p
                   style={{
-                    color: "rgba(229,231,235,0.4)",
+                    color: "rgba(92,61,46,0.5)",
                     fontFamily: "'Libre Baskerville', Georgia, serif",
                   }}
                   data-ocid="admin.empty_state"
@@ -1070,7 +3366,7 @@ export default function AdminSlide() {
                         style={{
                           fontFamily: "'Libre Baskerville', Georgia, serif",
                           fontSize: "0.82rem",
-                          color: "rgba(200,169,106,0.8)",
+                          color: "#D4A853",
                           marginRight: "0.5rem",
                         }}
                       >
@@ -1080,7 +3376,7 @@ export default function AdminSlide() {
                         style={{
                           fontFamily: "'Libre Baskerville', Georgia, serif",
                           fontSize: "0.85rem",
-                          color: "rgba(229,231,235,0.7)",
+                          color: "#8B6F47",
                         }}
                       >
                         {(post.preview || "").slice(0, 60)}
@@ -1100,76 +3396,14 @@ export default function AdminSlide() {
           </TabsContent>
 
           <TabsContent value="users">
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.5rem",
-              }}
-            >
-              {users.length === 0 ? (
-                <p
-                  style={{
-                    color: "rgba(229,231,235,0.4)",
-                    fontFamily: "'Libre Baskerville', Georgia, serif",
-                  }}
-                  data-ocid="admin.empty_state"
-                >
-                  No registered users
-                </p>
-              ) : (
-                users.map((user) => (
-                  <div
-                    key={user.username}
-                    className="feed-card"
-                    style={{
-                      padding: "0.75rem 1rem",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <div>
-                      <p
-                        style={{
-                          fontFamily: "'Libre Baskerville', Georgia, serif",
-                          fontSize: "0.9rem",
-                          color: "#F5E6D3",
-                          fontWeight: 600,
-                        }}
-                      >
-                        @{user.username}
-                      </p>
-                      {user.bio && (
-                        <p
-                          style={{
-                            fontFamily: "'Libre Baskerville', Georgia, serif",
-                            fontSize: "0.78rem",
-                            color: "rgba(229,231,235,0.4)",
-                          }}
-                        >
-                          {user.bio.slice(0, 60)}
-                        </p>
-                      )}
-                    </div>
-                    <Button
-                      onClick={() => deleteUser(user.username)}
-                      data-ocid="admin.delete_button"
-                      style={deleteBtn}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                ))
-              )}
-            </div>
+            <UsersTab users={users} onDeleteUser={deleteUser} />
           </TabsContent>
 
           <TabsContent value="gallery">
             {gallery.length === 0 ? (
               <p
                 style={{
-                  color: "rgba(229,231,235,0.4)",
+                  color: "rgba(92,61,46,0.5)",
                   fontFamily: "'Libre Baskerville', Georgia, serif",
                 }}
                 data-ocid="admin.empty_state"
@@ -1205,7 +3439,7 @@ export default function AdminSlide() {
                         style={{
                           fontFamily: "'Libre Baskerville', Georgia, serif",
                           fontSize: "0.75rem",
-                          color: "rgba(229,231,235,0.5)",
+                          color: "rgba(92,61,46,0.5)",
                           marginBottom: "0.25rem",
                         }}
                       >
@@ -1244,7 +3478,7 @@ export default function AdminSlide() {
                     fontFamily: "'Libre Baskerville', Georgia, serif",
                     fontSize: "0.9rem",
                     fontWeight: 600,
-                    color: "#F5E6D3",
+                    color: "#3D2B1F",
                     marginBottom: "0.75rem",
                   }}
                 >
@@ -1265,7 +3499,7 @@ export default function AdminSlide() {
                     style={{
                       background: "rgba(200,169,106,0.85)",
                       border: "none",
-                      color: "#fff",
+                      color: "#3D2B1F",
                     }}
                   >
                     Save
@@ -1278,7 +3512,7 @@ export default function AdminSlide() {
                     fontFamily: "'Libre Baskerville', Georgia, serif",
                     fontSize: "0.9rem",
                     fontWeight: 600,
-                    color: "#F5E6D3",
+                    color: "#3D2B1F",
                     marginBottom: "0.75rem",
                   }}
                 >
@@ -1290,9 +3524,9 @@ export default function AdminSlide() {
                   placeholder="Announcement visible to all users..."
                   data-ocid="admin.textarea"
                   style={{
-                    background: "rgba(255,255,255,0.05)",
-                    border: "1px solid rgba(200,169,106,0.2)",
-                    color: "#F5E6D3",
+                    background: "rgba(255,248,238,0.9)",
+                    border: "1px solid rgba(139,111,71,0.3)",
+                    color: "#3D2B1F",
                     fontFamily: "'Libre Baskerville', Georgia, serif",
                     minHeight: 80,
                   }}
@@ -1307,7 +3541,7 @@ export default function AdminSlide() {
                     marginTop: "0.5rem",
                     background: "rgba(200,169,106,0.85)",
                     border: "none",
-                    color: "#fff",
+                    color: "#3D2B1F",
                   }}
                 >
                   Save Announcement
@@ -1323,7 +3557,7 @@ export default function AdminSlide() {
                   fontFamily: "'Libre Baskerville', Georgia, serif",
                   fontSize: "0.9rem",
                   fontWeight: 600,
-                  color: "#F5E6D3",
+                  color: "#3D2B1F",
                   marginBottom: "0.75rem",
                 }}
               >
@@ -1334,9 +3568,9 @@ export default function AdminSlide() {
                 onChange={(e) => setRules(e.target.value)}
                 data-ocid="admin.textarea"
                 style={{
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(200,169,106,0.2)",
-                  color: "#F5E6D3",
+                  background: "rgba(255,248,238,0.9)",
+                  border: "1px solid rgba(139,111,71,0.3)",
+                  color: "#3D2B1F",
                   fontFamily: "'Libre Baskerville', Georgia, serif",
                   minHeight: 200,
                 }}
@@ -1351,7 +3585,7 @@ export default function AdminSlide() {
                   marginTop: "0.75rem",
                   background: "rgba(200,169,106,0.85)",
                   border: "none",
-                  color: "#fff",
+                  color: "#3D2B1F",
                 }}
               >
                 Save Rules
@@ -1374,7 +3608,7 @@ export default function AdminSlide() {
                   <h3
                     style={{
                       fontFamily: "'Playfair Display', Georgia, serif",
-                      color: "#C8A96A",
+                      color: "#D4A853",
                       margin: 0,
                       fontSize: "1.1rem",
                       fontWeight: 600,
@@ -1385,7 +3619,7 @@ export default function AdminSlide() {
                   <p
                     style={{
                       fontFamily: "'Libre Baskerville', Georgia, serif",
-                      color: "rgba(229,231,235,0.45)",
+                      color: "rgba(92,61,46,0.5)",
                       fontSize: "0.78rem",
                       margin: 0,
                       fontStyle: "italic",
@@ -1401,7 +3635,7 @@ export default function AdminSlide() {
                     marginLeft: "auto",
                     background: "rgba(200,169,106,0.12)",
                     border: "1px solid rgba(200,169,106,0.25)",
-                    color: "#C8A96A",
+                    color: "#D4A853",
                     fontSize: "0.78rem",
                   }}
                 >
@@ -1423,7 +3657,7 @@ export default function AdminSlide() {
                     {
                       label: "Pending",
                       count: moderationStats.pendingCount,
-                      color: "rgba(200,169,106,0.8)",
+                      color: "#D4A853",
                     },
                     {
                       label: "Approved",
@@ -1462,7 +3696,7 @@ export default function AdminSlide() {
                         style={{
                           fontFamily: "'Libre Baskerville', Georgia, serif",
                           fontSize: "0.72rem",
-                          color: "rgba(229,231,235,0.4)",
+                          color: "rgba(92,61,46,0.5)",
                           margin: 0,
                           textTransform: "uppercase",
                           letterSpacing: "0.1em",
@@ -1485,7 +3719,7 @@ export default function AdminSlide() {
                     style={{
                       fontFamily: "'Playfair Display', Georgia, serif",
                       fontStyle: "italic",
-                      color: "rgba(200,169,106,0.6)",
+                      color: "#8B6F47",
                       fontSize: "0.95rem",
                     }}
                   >
@@ -1533,20 +3767,18 @@ export default function AdminSlide() {
                             style={{
                               fontFamily: "'Libre Baskerville', Georgia, serif",
                               fontSize: "0.78rem",
-                              color: "rgba(200,169,106,0.7)",
+                              color: "#D4A853",
                               textTransform: "capitalize",
                             }}
                           >
                             {entry.contentType}
                           </span>
-                          <span style={{ color: "rgba(245,230,211,0.3)" }}>
-                            ·
-                          </span>
+                          <span style={{ color: "rgba(92,61,46,0.4)" }}>·</span>
                           <span
                             style={{
                               fontFamily: "'Libre Baskerville', Georgia, serif",
                               fontSize: "0.78rem",
-                              color: "rgba(245,230,211,0.5)",
+                              color: "rgba(92,61,46,0.5)",
                             }}
                           >
                             by {entry.authorName}
@@ -1554,8 +3786,8 @@ export default function AdminSlide() {
                           <span
                             style={{
                               marginLeft: "auto",
-                              background: `${riskColor.replace("0.85", "0.12")}`,
-                              border: `1px solid ${riskColor.replace("0.85", "0.3")}`,
+                              background: `${riskColor.replace("0.85", "0.12")}",
+                              border: "1px solid ${riskColor.replace("0.85", "0.3")}`,
                               borderRadius: 6,
                               padding: "0.1rem 0.5rem",
                               color: riskColor,
@@ -1571,7 +3803,7 @@ export default function AdminSlide() {
                           style={{
                             fontFamily: "'Playfair Display', Georgia, serif",
                             fontStyle: "italic",
-                            color: "rgba(229,231,235,0.7)",
+                            color: "#8B6F47",
                             fontSize: "0.88rem",
                             lineHeight: 1.6,
                             margin: "0 0 0.5rem",
@@ -1589,7 +3821,7 @@ export default function AdminSlide() {
                             style={{
                               fontFamily: "'Libre Baskerville', Georgia, serif",
                               fontSize: "0.75rem",
-                              color: "rgba(200,169,106,0.5)",
+                              color: "#8B6F47",
                               margin: "0 0 0.75rem",
                               fontStyle: "italic",
                             }}
@@ -1637,11 +3869,11 @@ export default function AdminSlide() {
                                 style={{
                                   flex: 1,
                                   minWidth: 140,
-                                  background: "rgba(255,255,255,0.05)",
-                                  border: "1px solid rgba(200,169,106,0.2)",
+                                  background: "rgba(255,248,238,0.9)",
+                                  border: "1px solid rgba(139,111,71,0.3)",
                                   borderRadius: 6,
                                   padding: "0.3rem 0.6rem",
-                                  color: "#F5E6D3",
+                                  color: "#3D2B1F",
                                   fontFamily:
                                     "'Libre Baskerville', Georgia, serif",
                                   fontSize: "0.78rem",
@@ -1680,7 +3912,7 @@ export default function AdminSlide() {
                                   border: "1px solid rgba(245,230,211,0.1)",
                                   borderRadius: 6,
                                   padding: "0.3rem 0.7rem",
-                                  color: "rgba(245,230,211,0.4)",
+                                  color: "rgba(92,61,46,0.5)",
                                   fontFamily:
                                     "'Libre Baskerville', Georgia, serif",
                                   fontSize: "0.78rem",
@@ -1729,6 +3961,18 @@ export default function AdminSlide() {
 
           <TabsContent value="replies">
             <InkRepliesTab />
+          </TabsContent>
+          <TabsContent value="ai-users">
+            <AiUsersTab />
+          </TabsContent>
+          <TabsContent value="music">
+            <MusicManagementTab />
+          </TabsContent>
+          <TabsContent value="inbox">
+            <AdminInboxTab />
+          </TabsContent>
+          <TabsContent value="about">
+            <AdminAboutTab />
           </TabsContent>
         </Tabs>
       </motion.div>

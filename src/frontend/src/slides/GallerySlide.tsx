@@ -2,6 +2,15 @@ import { Button } from "@/components/ui/button";
 import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 
+const WARM_BG = "#FFF8EE";
+const WARM_PAPER = "#F5ECD7";
+const WARM_MOCHA = "#5C3D2E";
+const WARM_BROWN = "#8B6F47";
+const WARM_GOLD = "#D4A853";
+const _WARM_TEXT = "#3D2B1F";
+const WARM_BORDER = "rgba(139,111,71,0.25)";
+const WARM_MUTED = "rgba(92,61,46,0.5)";
+
 interface GalleryPhoto {
   id: string;
   src: string;
@@ -16,9 +25,54 @@ interface User {
   createdAt: string;
 }
 
+interface GallerySlideProps {
+  currentUser: User | null;
+  viewUsername?: string; // If viewing another user's gallery
+}
+
 export default function GallerySlide({
   currentUser,
-}: { currentUser: User | null }) {
+  viewUsername,
+}: GallerySlideProps) {
+  // Gallery privacy check
+  const _targetUser = viewUsername || currentUser?.username;
+  const isViewingOther = viewUsername && viewUsername !== currentUser?.username;
+
+  const isGalleryLocked = (() => {
+    if (!isViewingOther || !viewUsername) return false;
+    try {
+      const profile = JSON.parse(
+        localStorage.getItem(`chinnua_profile_${viewUsername}`) || "{}",
+      );
+      if (!profile.isPrivate) return false;
+      // Check if current user is in approved list
+      const approved: string[] = JSON.parse(
+        localStorage.getItem(`chinnua_gallery_approved_${viewUsername}`) ||
+          "[]",
+      );
+      return !approved.includes(currentUser?.username || "");
+    } catch {
+      return false;
+    }
+  })();
+
+  const handleRequestAccess = () => {
+    if (!currentUser || !viewUsername) return;
+    try {
+      const requests: string[] = JSON.parse(
+        localStorage.getItem(`chinnua_gallery_requests_${viewUsername}`) ||
+          "[]",
+      );
+      if (!requests.includes(currentUser.username)) {
+        requests.push(currentUser.username);
+        localStorage.setItem(
+          `chinnua_gallery_requests_${viewUsername}`,
+          JSON.stringify(requests),
+        );
+      }
+      alert("Access request sent!");
+    } catch {}
+  };
   const [photos, setPhotos] = useState<GalleryPhoto[]>([]);
   const [likedPhotos, setLikedPhotos] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
@@ -82,10 +136,73 @@ export default function GallerySlide({
 
   const openFileDialog = () => fileRef.current?.click();
 
+  if (isGalleryLocked) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background: WARM_BG,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div
+          style={{
+            textAlign: "center",
+            padding: "2.5rem",
+            background: WARM_PAPER,
+            border: `1px solid ${WARM_BORDER}`,
+            borderRadius: 16,
+            maxWidth: 360,
+          }}
+        >
+          <p
+            style={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              fontSize: "1.1rem",
+              color: WARM_MOCHA,
+              marginBottom: "0.75rem",
+            }}
+          >
+            Private Gallery
+          </p>
+          <p
+            style={{
+              fontFamily: "'Lora', Georgia, serif",
+              fontStyle: "italic",
+              fontSize: "0.85rem",
+              color: WARM_MUTED,
+              marginBottom: "1.25rem",
+            }}
+          >
+            This gallery is private. Request access to view its photos.
+          </p>
+          <Button
+            onClick={handleRequestAccess}
+            data-ocid="gallery.primary_button"
+            style={{
+              background: "rgba(212,168,83,0.85)",
+              border: "none",
+              color: "#3D2B1F",
+              fontFamily: "'Libre Baskerville', Georgia, serif",
+            }}
+          >
+            Request Access
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
-      className="slide-container"
-      style={{ overflowY: "auto", paddingBottom: "2rem" }}
+      style={{
+        background: WARM_BG,
+        overflowY: "auto",
+        paddingBottom: "2rem",
+        minHeight: "100vh",
+      }}
     >
       <motion.div
         initial={{ opacity: 0 }}
@@ -106,7 +223,7 @@ export default function GallerySlide({
             style={{
               fontFamily: "'Playfair Display', Georgia, serif",
               fontSize: "1.6rem",
-              color: "#F5E6D3",
+              color: WARM_MOCHA,
               fontWeight: 700,
             }}
           >
@@ -123,13 +240,13 @@ export default function GallerySlide({
             onClick={openFileDialog}
             data-ocid="gallery.upload_button"
             style={{
-              background: "rgba(200,169,106,0.85)",
+              background: `linear-gradient(135deg, ${WARM_GOLD}, ${WARM_BROWN})`,
               border: "none",
-              color: "#fff",
+              color: "#3D2B1F",
               fontFamily: "'Libre Baskerville', Georgia, serif",
             }}
           >
-            + Upload Photo
+            Upload Photo
           </Button>
         </div>
 
@@ -140,7 +257,7 @@ export default function GallerySlide({
               width: "100%",
               textAlign: "center",
               padding: "4rem 2rem",
-              border: "2px dashed rgba(200,169,106,0.2)",
+              border: `2px dashed ${WARM_BORDER}`,
               borderRadius: 12,
               cursor: "pointer",
               background: "transparent",
@@ -151,7 +268,7 @@ export default function GallerySlide({
           >
             <p
               style={{
-                color: "rgba(229,231,235,0.4)",
+                color: WARM_MUTED,
                 fontFamily: "'Playfair Display', Georgia, serif",
                 fontSize: "1.1rem",
                 marginBottom: "0.5rem",
@@ -161,7 +278,7 @@ export default function GallerySlide({
             </p>
             <p
               style={{
-                color: "rgba(200,169,106,0.6)",
+                color: WARM_GOLD,
                 fontFamily: "'Libre Baskerville', Georgia, serif",
                 fontSize: "0.85rem",
               }}
@@ -197,13 +314,14 @@ export default function GallerySlide({
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
+                    background: WARM_PAPER,
                   }}
                 >
                   <span
                     style={{
                       fontFamily: "'Libre Baskerville', Georgia, serif",
                       fontSize: "0.8rem",
-                      color: "rgba(229,231,235,0.6)",
+                      color: WARM_BROWN,
                     }}
                   >
                     {photo.uploader}
@@ -216,13 +334,27 @@ export default function GallerySlide({
                       background: "none",
                       border: "none",
                       cursor: "pointer",
-                      color: likedPhotos.has(photo.id)
-                        ? "#f43f5e"
-                        : "rgba(229,231,235,0.5)",
+                      color: likedPhotos.has(photo.id) ? "#c0392b" : WARM_BROWN,
                       fontSize: "0.82rem",
+                      fontFamily: "'Libre Baskerville', Georgia, serif",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.25rem",
                     }}
                   >
-                    ❤️ {photo.likes}
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill={likedPhotos.has(photo.id) ? "currentColor" : "none"}
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      role="img"
+                      aria-label="Like"
+                    >
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                    </svg>
+                    {photo.likes}
                   </button>
                 </div>
               </motion.div>

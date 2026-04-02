@@ -1,5 +1,11 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
+import {
+  getAiSettings,
+  getAutoSuggestLine,
+  getWritingSuggestions,
+  speakText,
+} from "../utils/aiFeatures";
 
 interface Note {
   id: string;
@@ -46,11 +52,11 @@ function saveNotes(username: string, notes: Note[]) {
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
-  background: "#0D0D0D",
+  background: "#FFF8EE",
   border: "1px solid rgba(200,169,106,0.25)",
   borderRadius: 6,
   padding: "0.65rem 0.85rem",
-  color: "#F5E6D3",
+  color: "#3D2B1F",
   fontFamily: "'Cormorant Garamond', Georgia, serif",
   fontSize: "1rem",
   outline: "none",
@@ -63,7 +69,7 @@ const labelStyle: React.CSSProperties = {
   fontSize: "0.68rem",
   letterSpacing: "0.1em",
   textTransform: "uppercase" as const,
-  color: "rgba(200,169,106,0.6)",
+  color: "#8B6F47",
   display: "block",
   marginBottom: "0.4rem",
 };
@@ -82,6 +88,27 @@ function NoteFormModal({
   const [isPublic, setIsPublic] = useState(note?.isPublic ?? false);
   const [titleFocused, setTitleFocused] = useState(false);
   const [contentFocused, setContentFocused] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [autoSuggest, setAutoSuggest] = useState("");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const aiSettings = getAiSettings();
+
+  // Auto-suggest debounce
+  const handleContentChange = (val: string) => {
+    setContent(val);
+    if (aiSettings.aiAutoSuggest) {
+      const lines = val.split("\n");
+      const lastLine = lines[lines.length - 1] || "";
+      if (lastLine.length > 5) {
+        setAutoSuggest(getAutoSuggestLine(lastLine));
+      } else {
+        setAutoSuggest("");
+      }
+    }
+    if (aiSettings.aiWritingSuggestions && val.length > 20) {
+      setSuggestions(getWritingSuggestions(val));
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,7 +144,7 @@ function NoteFormModal({
         exit={{ opacity: 0, y: 12 }}
         transition={{ duration: 0.3 }}
         style={{
-          background: "#1A1410",
+          background: "#F5ECD7",
           border: "1px solid rgba(200,169,106,0.3)",
           borderRadius: 12,
           width: "100%",
@@ -141,7 +168,7 @@ function NoteFormModal({
             background: "none",
             border: "none",
             cursor: "pointer",
-            color: "rgba(245,230,211,0.4)",
+            color: "rgba(92,61,46,0.5)",
             fontSize: "1.4rem",
             lineHeight: 1,
             padding: "0.25rem 0.4rem",
@@ -153,7 +180,7 @@ function NoteFormModal({
         <h3
           style={{
             fontFamily: "'Playfair Display', Georgia, serif",
-            color: "#C8A96A",
+            color: "#D4A853",
             fontSize: "1.15rem",
             letterSpacing: "0.06em",
             marginBottom: "1.5rem",
@@ -204,7 +231,7 @@ function NoteFormModal({
               id="note-content"
               data-ocid="notes.textarea"
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={(e) => handleContentChange(e.target.value)}
               onFocus={() => setContentFocused(true)}
               onBlur={() => setContentFocused(false)}
               placeholder="Pour your thoughts here..."
@@ -223,6 +250,156 @@ function NoteFormModal({
             />
           </div>
 
+          {/* AI Writing Tools */}
+          {(aiSettings.aiAutoSuggest ||
+            aiSettings.aiWritingSuggestions ||
+            aiSettings.aiAudioGen) && (
+            <div
+              style={{
+                display: "flex",
+                gap: "0.5rem",
+                flexWrap: "wrap",
+                marginTop: "-0.25rem",
+              }}
+            >
+              {aiSettings.aiAudioGen && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    speakText(
+                      content,
+                      aiSettings.defaultVoice,
+                      aiSettings.playbackSpeed,
+                    )
+                  }
+                  data-ocid="notes.secondary_button"
+                  style={{
+                    padding: "0.25rem 0.7rem",
+                    background: "transparent",
+                    border: "1px solid rgba(139,111,71,0.3)",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    fontFamily: "'Lora', Georgia, serif",
+                    fontSize: "0.72rem",
+                    color: "#8B6F47",
+                  }}
+                >
+                  🔊 Listen
+                </button>
+              )}
+              {aiSettings.aiWritingSuggestions && content.length > 20 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSuggestions(getWritingSuggestions(content));
+                    setShowSuggestions((s) => !s);
+                  }}
+                  data-ocid="notes.toggle"
+                  style={{
+                    padding: "0.25rem 0.7rem",
+                    background: "transparent",
+                    border: "1px solid rgba(139,111,71,0.3)",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    fontFamily: "'Lora', Georgia, serif",
+                    fontSize: "0.72rem",
+                    color: "#8B6F47",
+                  }}
+                >
+                  ✨ Suggestions
+                </button>
+              )}
+            </div>
+          )}
+          {/* Auto-suggest ghost text */}
+          {aiSettings.aiAutoSuggest && autoSuggest && (
+            <div
+              style={{
+                fontFamily: "'Playfair Display', Georgia, serif",
+                fontStyle: "italic",
+                fontSize: "0.82rem",
+                color: "rgba(139,111,71,0.45)",
+                padding: "0.25rem 0.5rem",
+                borderLeft: "2px solid rgba(212,168,83,0.3)",
+              }}
+            >
+              {autoSuggest}
+              <button
+                type="button"
+                onClick={() => {
+                  setContent(
+                    (c) => c + (c.endsWith("\n") ? "" : "\n") + autoSuggest,
+                  );
+                  setAutoSuggest("");
+                }}
+                style={{
+                  marginLeft: "0.5rem",
+                  fontSize: "0.65rem",
+                  color: "rgba(212,168,83,0.7)",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+              >
+                ↵ Add
+              </button>
+            </div>
+          )}
+          {/* Writing suggestions */}
+          {showSuggestions && suggestions.length > 0 && (
+            <div
+              style={{
+                background: "rgba(212,168,83,0.06)",
+                border: "1px solid rgba(212,168,83,0.2)",
+                borderRadius: 8,
+                padding: "0.75rem",
+              }}
+            >
+              <p
+                style={{
+                  fontSize: "0.7rem",
+                  color: "#8B6F47",
+                  marginBottom: "0.4rem",
+                  fontFamily: "'Lora', Georgia, serif",
+                }}
+              >
+                Suggested next lines:
+              </p>
+              {suggestions.map((s) => (
+                <button
+                  key={s.slice(0, 30)}
+                  type="button"
+                  onClick={() => {
+                    setContent((c) => c + (c.endsWith("\n") ? "" : "\n") + s);
+                    setShowSuggestions(false);
+                  }}
+                  data-ocid="notes.item.1"
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "0.3rem 0.5rem",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    fontFamily: "'Playfair Display', Georgia, serif",
+                    fontStyle: "italic",
+                    fontSize: "0.82rem",
+                    color: "#5C3D2E",
+                    borderRadius: 4,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(212,168,83,0.1)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "transparent";
+                  }}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
           {/* Privacy toggle */}
           <div
             style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}
@@ -237,7 +414,7 @@ function NoteFormModal({
                 width: 44,
                 height: 24,
                 borderRadius: 12,
-                background: isPublic ? "#C8A96A" : "rgba(245,230,211,0.12)",
+                background: isPublic ? "#C8A96A" : "#8B6F47",
                 border: isPublic
                   ? "1px solid #C8A96A"
                   : "1px solid rgba(200,169,106,0.2)",
@@ -255,7 +432,9 @@ function NoteFormModal({
                   width: 16,
                   height: 16,
                   borderRadius: "50%",
-                  background: isPublic ? "#0D0D0D" : "rgba(245,230,211,0.35)",
+                  background: isPublic
+                    ? "rgba(212,168,83,0.2)"
+                    : "rgba(139,111,71,0.15)",
                   transition: "left 0.25s, background 0.25s",
                 }}
               />
@@ -264,7 +443,7 @@ function NoteFormModal({
               style={{
                 fontFamily: "'Libre Baskerville', Georgia, serif",
                 fontSize: "0.78rem",
-                color: isPublic ? "#C8A96A" : "rgba(245,230,211,0.5)",
+                color: isPublic ? "#D4A853" : "#8B6F47",
                 transition: "color 0.25s",
               }}
             >
@@ -289,10 +468,10 @@ function NoteFormModal({
               data-ocid="notes.cancel_button"
               style={{
                 background: "transparent",
-                border: "1px solid rgba(200,169,106,0.2)",
+                border: "1px solid rgba(139,111,71,0.3)",
                 borderRadius: 6,
                 padding: "0.55rem 1.2rem",
-                color: "rgba(245,230,211,0.5)",
+                color: "rgba(92,61,46,0.5)",
                 fontFamily: "'Libre Baskerville', Georgia, serif",
                 fontSize: "0.75rem",
                 letterSpacing: "0.08em",
@@ -311,7 +490,7 @@ function NoteFormModal({
                 border: "1px solid rgba(200,169,106,0.5)",
                 borderRadius: 6,
                 padding: "0.55rem 1.4rem",
-                color: "#C8A96A",
+                color: "#D4A853",
                 fontFamily: "'Libre Baskerville', Georgia, serif",
                 fontSize: "0.75rem",
                 letterSpacing: "0.08em",
@@ -370,7 +549,7 @@ function NoteViewModal({
         exit={{ opacity: 0, y: 12 }}
         transition={{ duration: 0.3 }}
         style={{
-          background: "#1A1410",
+          background: "#F5ECD7",
           border: "1px solid rgba(200,169,106,0.3)",
           borderRadius: 12,
           width: "100%",
@@ -394,7 +573,7 @@ function NoteViewModal({
             background: "none",
             border: "none",
             cursor: "pointer",
-            color: "rgba(245,230,211,0.4)",
+            color: "rgba(92,61,46,0.5)",
             fontSize: "1.4rem",
             lineHeight: 1,
             padding: "0.25rem 0.4rem",
@@ -429,7 +608,7 @@ function NoteViewModal({
         <h2
           style={{
             fontFamily: "'Playfair Display', Georgia, serif",
-            color: "#F5E6D3",
+            color: "#3D2B1F",
             fontSize: "1.45rem",
             fontWeight: 400,
             lineHeight: 1.35,
@@ -445,7 +624,7 @@ function NoteViewModal({
           style={{
             fontFamily: "'Libre Baskerville', Georgia, serif",
             fontSize: "0.68rem",
-            color: "rgba(200,169,106,0.45)",
+            color: "#D4A853",
             letterSpacing: "0.07em",
             marginBottom: "1.75rem",
           }}
@@ -470,13 +649,13 @@ function NoteViewModal({
             fontFamily: "'Cormorant Garamond', Georgia, serif",
             fontSize: "1.05rem",
             lineHeight: 1.9,
-            color: "rgba(245,230,211,0.85)",
+            color: "#3D2B1F",
             whiteSpace: "pre-wrap",
             marginBottom: "2rem",
           }}
         >
           {note.content || (
-            <em style={{ color: "rgba(245,230,211,0.3)" }}>No content.</em>
+            <em style={{ color: "rgba(92,61,46,0.4)" }}>No content.</em>
           )}
         </div>
 
@@ -491,7 +670,7 @@ function NoteViewModal({
               border: "1px solid rgba(200,169,106,0.3)",
               borderRadius: 6,
               padding: "0.5rem 1.1rem",
-              color: "#C8A96A",
+              color: "#D4A853",
               fontFamily: "'Libre Baskerville', Georgia, serif",
               fontSize: "0.7rem",
               letterSpacing: "0.08em",
@@ -531,7 +710,7 @@ function NoteViewModal({
                   fontFamily: "'Cormorant Garamond', Georgia, serif",
                   fontStyle: "italic",
                   fontSize: "0.82rem",
-                  color: "rgba(245,230,211,0.5)",
+                  color: "rgba(92,61,46,0.5)",
                 }}
               >
                 Are you sure?
@@ -564,7 +743,7 @@ function NoteViewModal({
                   border: "1px solid rgba(200,169,106,0.15)",
                   borderRadius: 6,
                   padding: "0.4rem 0.9rem",
-                  color: "rgba(245,230,211,0.4)",
+                  color: "rgba(92,61,46,0.5)",
                   fontFamily: "'Libre Baskerville', Georgia, serif",
                   fontSize: "0.68rem",
                   letterSpacing: "0.08em",
@@ -657,7 +836,7 @@ export default function NotesSlide({ currentUser, onLogin }: Props) {
       <div
         style={{
           minHeight: "100vh",
-          background: "#0D0D0D",
+          background: "#FFF8EE",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -671,7 +850,7 @@ export default function NotesSlide({ currentUser, onLogin }: Props) {
             fontFamily: "'Cormorant Garamond', Georgia, serif",
             fontStyle: "italic",
             fontSize: "1.25rem",
-            color: "rgba(245,230,211,0.45)",
+            color: "rgba(92,61,46,0.5)",
             marginBottom: "2rem",
             lineHeight: 1.7,
             maxWidth: 340,
@@ -691,7 +870,7 @@ export default function NotesSlide({ currentUser, onLogin }: Props) {
               border: "1px solid rgba(200,169,106,0.35)",
               borderRadius: 7,
               padding: "0.65rem 1.8rem",
-              color: "#C8A96A",
+              color: "#D4A853",
               fontFamily: "'Libre Baskerville', Georgia, serif",
               fontSize: "0.75rem",
               letterSpacing: "0.1em",
@@ -714,7 +893,7 @@ export default function NotesSlide({ currentUser, onLogin }: Props) {
         transition={{ duration: 0.5 }}
         style={{
           minHeight: "100vh",
-          background: "#0D0D0D",
+          background: "#FFF8EE",
           padding: "3.5rem 1.5rem 5rem",
           maxWidth: 720,
           margin: "0 auto",
@@ -735,7 +914,7 @@ export default function NotesSlide({ currentUser, onLogin }: Props) {
             <h1
               style={{
                 fontFamily: "'Playfair Display', Georgia, serif",
-                color: "#C8A96A",
+                color: "#D4A853",
                 fontSize: "2rem",
                 fontWeight: 400,
                 letterSpacing: "0.04em",
@@ -749,7 +928,7 @@ export default function NotesSlide({ currentUser, onLogin }: Props) {
                 fontFamily: "'Cormorant Garamond', Georgia, serif",
                 fontStyle: "italic",
                 fontSize: "0.88rem",
-                color: "rgba(200,169,106,0.45)",
+                color: "#D4A853",
                 marginTop: "0.4rem",
                 marginBottom: 0,
               }}
@@ -767,7 +946,7 @@ export default function NotesSlide({ currentUser, onLogin }: Props) {
               border: "1px solid rgba(200,169,106,0.4)",
               borderRadius: 7,
               padding: "0.55rem 1.3rem",
-              color: "#C8A96A",
+              color: "#D4A853",
               fontFamily: "'Libre Baskerville', Georgia, serif",
               fontSize: "0.7rem",
               letterSpacing: "0.1em",
@@ -808,11 +987,7 @@ export default function NotesSlide({ currentUser, onLogin }: Props) {
               background: "rgba(200,169,106,0.18)",
             }}
           />
-          <span
-            style={{ color: "rgba(200,169,106,0.35)", fontSize: "0.85rem" }}
-          >
-            ✦
-          </span>
+          <span style={{ color: "#D4A853", fontSize: "0.85rem" }}>✦</span>
           <div
             style={{
               flex: 1,
@@ -833,7 +1008,7 @@ export default function NotesSlide({ currentUser, onLogin }: Props) {
                 fontFamily: "'Cormorant Garamond', Georgia, serif",
                 fontStyle: "italic",
                 fontSize: "1.2rem",
-                color: "rgba(245,230,211,0.3)",
+                color: "rgba(92,61,46,0.4)",
                 lineHeight: 1.8,
               }}
             >
@@ -907,7 +1082,7 @@ function NoteCard({
       onMouseLeave={() => setHovered(false)}
       data-ocid={`notes.item.${index}`}
       style={{
-        background: "#1A1410",
+        background: "#F5ECD7",
         border: "none",
         borderLeft: hovered
           ? "2px solid #C8A96A"
@@ -935,7 +1110,7 @@ function NoteCard({
             fontFamily: "'Playfair Display', Georgia, serif",
             fontSize: "1rem",
             fontWeight: 400,
-            color: hovered ? "#F5E6D3" : "rgba(245,230,211,0.85)",
+            color: hovered ? "#3D2B1F" : "#5C3D2E",
             margin: 0,
             lineHeight: 1.4,
             transition: "color 0.2s",
@@ -972,7 +1147,7 @@ function NoteCard({
             fontFamily: "'Cormorant Garamond', Georgia, serif",
             fontStyle: "italic",
             fontSize: "0.9rem",
-            color: "rgba(245,230,211,0.42)",
+            color: "rgba(92,61,46,0.5)",
             margin: "0 0 0.6rem",
             lineHeight: 1.65,
           }}
@@ -985,7 +1160,7 @@ function NoteCard({
         style={{
           fontFamily: "'Libre Baskerville', Georgia, serif",
           fontSize: "0.62rem",
-          color: "rgba(200,169,106,0.35)",
+          color: "#D4A853",
           letterSpacing: "0.06em",
           margin: 0,
         }}

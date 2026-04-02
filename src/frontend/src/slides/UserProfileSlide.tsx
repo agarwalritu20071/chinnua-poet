@@ -5,6 +5,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AnimatePresence, motion } from "motion/react";
+import React from "react";
 import { useEffect, useRef, useState } from "react";
 import { useCamera } from "../camera/useCamera";
 import { POEMS } from "../poems-data";
@@ -44,7 +45,7 @@ interface UserProfileSlideProps {
   onLogin: () => void;
 }
 
-type Tab = "posts" | "notes" | "likes" | "messages";
+type Tab = "posts" | "notes" | "likes" | "messages" | "saved";
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -113,7 +114,7 @@ const GoldBtn: React.CSSProperties = {
   border: "1px solid rgba(200,169,106,0.3)",
   borderRadius: 6,
   padding: "0.4rem 0.9rem",
-  color: "#C8A96A",
+  color: "#D4A853",
   fontFamily: "'Libre Baskerville', Georgia, serif",
   fontSize: "0.73rem",
   letterSpacing: "0.06em",
@@ -124,17 +125,262 @@ const GoldBtn: React.CSSProperties = {
 
 const inputSx: React.CSSProperties = {
   width: "100%",
-  background: "#0D0D0D",
+  background: "#FFF8EE",
   border: "1px solid rgba(200,169,106,0.22)",
   borderRadius: 6,
   padding: "0.55rem 0.8rem",
-  color: "#F5E6D3",
+  color: "#3D2B1F",
   fontFamily: "'Cormorant Garamond', Georgia, serif",
   fontSize: "1rem",
   outline: "none",
   transition: "border-color 0.2s, box-shadow 0.2s",
   boxSizing: "border-box" as const,
 };
+
+function SavedItemsTab({
+  viewUsername,
+  isOwn,
+}: { viewUsername: string; isOwn: boolean }) {
+  const WARM_PAPER = "#F5ECD7";
+  const WARM_BORDER = "rgba(139,111,71,0.25)";
+  const WARM_MOCHA = "#5C3D2E";
+  const WARM_BROWN = "#8B6F47";
+  const _WARM_TEXT = "#3D2B1F";
+
+  interface SavedItem {
+    id: string;
+    title?: string;
+    type: "post" | "poem" | "music";
+    savedAt: string;
+  }
+
+  const [savedItems, setSavedItems] = React.useState<SavedItem[]>([]);
+  const [showSavedPublic, setShowSavedPublic] = React.useState(() => {
+    try {
+      return (
+        localStorage.getItem(`chinnua_saved_public_${viewUsername}`) === "true"
+      );
+    } catch {
+      return false;
+    }
+  });
+
+  React.useEffect(() => {
+    if (!isOwn && !showSavedPublic) return;
+    try {
+      const posts = (
+        JSON.parse(
+          localStorage.getItem(`chinnua_saved_posts_${viewUsername}`) || "[]",
+        ) as any[]
+      ).map((s: any) => ({
+        id: String(s.id || s),
+        title: s.title || "Saved Post",
+        type: "post" as const,
+        savedAt: s.savedAt || "",
+      }));
+      const poems = (
+        JSON.parse(
+          localStorage.getItem(`chinnua_saved_poems_${viewUsername}`) || "[]",
+        ) as any[]
+      ).map((s: any) => ({
+        id: String(s.id || s),
+        title: s.title || "Saved Poem",
+        type: "poem" as const,
+        savedAt: s.savedAt || "",
+      }));
+      const music = (
+        JSON.parse(
+          localStorage.getItem(`chinnua_saved_music_${viewUsername}`) || "[]",
+        ) as any[]
+      ).map((s: any) => ({
+        id: String(s.id || s),
+        title: s.title || "Saved Track",
+        type: "music" as const,
+        savedAt: s.savedAt || "",
+      }));
+      setSavedItems(
+        [...posts, ...poems, ...music].sort(
+          (a, b) =>
+            new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime(),
+        ),
+      );
+    } catch {}
+  }, [viewUsername, isOwn, showSavedPublic]);
+
+  const togglePublic = () => {
+    const next = !showSavedPublic;
+    setShowSavedPublic(next);
+    localStorage.setItem(`chinnua_saved_public_${viewUsername}`, String(next));
+  };
+
+  const removeSaved = (item: SavedItem) => {
+    const key =
+      item.type === "post"
+        ? `chinnua_saved_posts_${viewUsername}`
+        : item.type === "poem"
+          ? `chinnua_saved_poems_${viewUsername}`
+          : `chinnua_saved_music_${viewUsername}`;
+    try {
+      const arr = JSON.parse(localStorage.getItem(key) || "[]");
+      const filtered = arr.filter((s: any) => (s.id || s) !== item.id);
+      localStorage.setItem(key, JSON.stringify(filtered));
+      setSavedItems((prev) =>
+        prev.filter((s) => s.id !== item.id || s.type !== item.type),
+      );
+    } catch {}
+  };
+
+  if (!isOwn && !showSavedPublic) {
+    return (
+      <div
+        style={{ textAlign: "center", padding: "3rem 1rem", color: WARM_BROWN }}
+      >
+        <p
+          style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            fontStyle: "italic",
+          }}
+        >
+          This user&apos;s saved items are private.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {isOwn && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.75rem",
+            marginBottom: "1.25rem",
+          }}
+        >
+          <button
+            type="button"
+            onClick={togglePublic}
+            data-ocid="profile.toggle"
+            style={{
+              width: 40,
+              height: 22,
+              borderRadius: 11,
+              background: showSavedPublic ? "#C8A96A" : "#8B6F47",
+              border: "none",
+              cursor: "pointer",
+              position: "relative",
+              transition: "background 0.2s",
+            }}
+          >
+            <span
+              style={{
+                position: "absolute",
+                top: 2,
+                left: showSavedPublic ? "calc(100% - 20px)" : 2,
+                width: 18,
+                height: 18,
+                borderRadius: "50%",
+                background: "white",
+                transition: "left 0.2s",
+              }}
+            />
+          </button>
+          <span
+            style={{
+              fontFamily: "'Lora', Georgia, serif",
+              fontSize: "0.8rem",
+              color: WARM_BROWN,
+            }}
+          >
+            {showSavedPublic
+              ? "Saved items visible to others"
+              : "Saved items hidden from others"}
+          </span>
+        </div>
+      )}
+      {savedItems.length === 0 ? (
+        <div
+          data-ocid="profile.saved.empty_state"
+          style={{
+            textAlign: "center",
+            padding: "3rem",
+            color: WARM_BROWN,
+            fontFamily: "'Lora', Georgia, serif",
+            fontStyle: "italic",
+          }}
+        >
+          No saved items yet.
+        </div>
+      ) : (
+        <div
+          style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}
+        >
+          {savedItems.map((item, idx) => (
+            <div
+              key={`${item.type}-${item.id}`}
+              data-ocid={`profile.saved.item.${idx + 1}`}
+              style={{
+                background: WARM_PAPER,
+                border: `1px solid ${WARM_BORDER}`,
+                borderRadius: 10,
+                padding: "0.75rem 1rem",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "0.75rem",
+              }}
+            >
+              <div>
+                <span
+                  style={{
+                    fontSize: "0.7rem",
+                    padding: "1px 6px",
+                    background: "rgba(212,168,83,0.12)",
+                    borderRadius: 4,
+                    color: "#D4A853",
+                    fontFamily: "'Libre Baskerville', Georgia, serif",
+                    textTransform: "capitalize",
+                  }}
+                >
+                  {item.type}
+                </span>
+                <p
+                  style={{
+                    fontFamily: "'Playfair Display', Georgia, serif",
+                    fontStyle: "italic",
+                    color: WARM_MOCHA,
+                    fontSize: "0.88rem",
+                    margin: "0.25rem 0 0",
+                  }}
+                >
+                  {item.title}
+                </p>
+              </div>
+              {isOwn && (
+                <button
+                  type="button"
+                  onClick={() => removeSaved(item)}
+                  data-ocid="profile.saved.delete_button"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "0.72rem",
+                    color: "rgba(92,61,46,0.4)",
+                    fontFamily: "'Lora', Georgia, serif",
+                  }}
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function UserProfileSlide({
   viewUsername,
@@ -384,14 +630,15 @@ export default function UserProfileSlide({
           { key: "messages" as Tab, label: "Messages" },
         ]
       : []),
+    { key: "saved" as Tab, label: "Saved" },
   ];
 
   return (
     <div
       style={{
         minHeight: "100vh",
-        background: "#0D0D0D",
-        color: "#F5E6D3",
+        background: "#FFF8EE",
+        color: "#3D2B1F",
         display: "flex",
         flexDirection: "column",
       }}
@@ -420,7 +667,7 @@ export default function UserProfileSlide({
             background: "none",
             border: "none",
             cursor: "pointer",
-            color: "rgba(200,169,106,0.7)",
+            color: "#D4A853",
             fontFamily: "'Libre Baskerville', Georgia, serif",
             fontSize: "0.8rem",
             display: "flex",
@@ -443,7 +690,7 @@ export default function UserProfileSlide({
           style={{
             fontFamily: "'Playfair Display', Georgia, serif",
             fontSize: "0.8rem",
-            color: "rgba(245,230,211,0.5)",
+            color: "rgba(92,61,46,0.5)",
             letterSpacing: "0.05em",
           }}
         >
@@ -498,7 +745,7 @@ export default function UserProfileSlide({
                   style={{
                     fontFamily: "'Playfair Display', Georgia, serif",
                     fontSize: "2rem",
-                    color: "#C8A96A",
+                    color: "#D4A853",
                     fontWeight: 700,
                   }}
                 >
@@ -516,7 +763,7 @@ export default function UserProfileSlide({
                     position: "absolute",
                     bottom: 0,
                     right: 0,
-                    background: "#1A1410",
+                    background: "#F5ECD7",
                     border: "1px solid rgba(200,169,106,0.4)",
                     borderRadius: "50%",
                     width: 24,
@@ -525,7 +772,7 @@ export default function UserProfileSlide({
                     alignItems: "center",
                     justifyContent: "center",
                     cursor: "pointer",
-                    color: "#C8A96A",
+                    color: "#D4A853",
                     fontSize: "0.65rem",
                   }}
                 >
@@ -547,7 +794,7 @@ export default function UserProfileSlide({
                     position: "absolute",
                     bottom: 0,
                     left: 0,
-                    background: "#1A1410",
+                    background: "#F5ECD7",
                     border: "1px solid rgba(200,169,106,0.4)",
                     borderRadius: "50%",
                     width: 24,
@@ -556,7 +803,7 @@ export default function UserProfileSlide({
                     alignItems: "center",
                     justifyContent: "center",
                     cursor: "pointer",
-                    color: "#C8A96A",
+                    color: "#D4A853",
                     fontSize: "0.6rem",
                   }}
                 >
@@ -584,7 +831,7 @@ export default function UserProfileSlide({
                       fontSize: "0.65rem",
                       letterSpacing: "0.1em",
                       textTransform: "uppercase",
-                      color: "rgba(200,169,106,0.55)",
+                      color: "#D4A853",
                       display: "block",
                       marginBottom: "0.3rem",
                     }}
@@ -632,7 +879,7 @@ export default function UserProfileSlide({
                     type="button"
                     onClick={() => setEditMode(false)}
                     data-ocid="profile.cancel_button"
-                    style={{ ...GoldBtn, color: "rgba(245,230,211,0.5)" }}
+                    style={{ ...GoldBtn, color: "rgba(92,61,46,0.5)" }}
                   >
                     Cancel
                   </button>
@@ -655,7 +902,7 @@ export default function UserProfileSlide({
                       fontSize: "1.4rem",
                       fontWeight: 700,
                       color:
-                        viewUsername === "CHINNUA_POET" ? "#C8A96A" : "#F5E6D3",
+                        viewUsername === "CHINNUA_POET" ? "#C8A96A" : "#5C3D2E",
                       margin: 0,
                     }}
                   >
@@ -672,7 +919,7 @@ export default function UserProfileSlide({
                         background: "none",
                         border: "none",
                         cursor: "pointer",
-                        color: "rgba(200,169,106,0.5)",
+                        color: "#8B6F47",
                         fontSize: "0.85rem",
                         padding: 2,
                         transition: "color 0.2s",
@@ -689,7 +936,7 @@ export default function UserProfileSlide({
                       fontFamily: "'Cormorant Garamond', Georgia, serif",
                       fontStyle: "italic",
                       fontSize: "0.95rem",
-                      color: "rgba(245,230,211,0.65)",
+                      color: "#8B6F47",
                       lineHeight: 1.6,
                       marginBottom: "0.5rem",
                     }}
@@ -746,8 +993,7 @@ export default function UserProfileSlide({
                     : "2px solid transparent",
                 padding: "0.6rem 1.1rem",
                 cursor: "pointer",
-                color:
-                  activeTab === tab.key ? "#C8A96A" : "rgba(245,230,211,0.45)",
+                color: activeTab === tab.key ? "#C8A96A" : "#8B6F47",
                 fontFamily: "'Libre Baskerville', Georgia, serif",
                 fontSize: "0.72rem",
                 letterSpacing: "0.08em",
@@ -798,7 +1044,7 @@ export default function UserProfileSlide({
                     style={{
                       textAlign: "center",
                       padding: "3rem 0",
-                      color: "rgba(245,230,211,0.3)",
+                      color: "rgba(92,61,46,0.4)",
                       fontFamily: "'Cormorant Garamond', Georgia, serif",
                       fontStyle: "italic",
                       fontSize: "1rem",
@@ -833,7 +1079,7 @@ export default function UserProfileSlide({
                             fontFamily: "'Playfair Display', Georgia, serif",
                             fontWeight: 700,
                             fontSize: "0.95rem",
-                            color: "#F5E6D3",
+                            color: "#3D2B1F",
                             marginBottom: "0.35rem",
                           }}
                         >
@@ -876,7 +1122,7 @@ export default function UserProfileSlide({
                               data-ocid="profile.posts.cancel_button"
                               style={{
                                 ...GoldBtn,
-                                color: "rgba(245,230,211,0.45)",
+                                color: "rgba(92,61,46,0.5)",
                               }}
                             >
                               Cancel
@@ -897,7 +1143,7 @@ export default function UserProfileSlide({
                                 "'Cormorant Garamond', Georgia, serif",
                               fontStyle: "italic",
                               fontSize: "0.9rem",
-                              color: "rgba(245,230,211,0.65)",
+                              color: "#8B6F47",
                               lineHeight: 1.7,
                               whiteSpace: "pre-line",
                               overflow: "hidden",
@@ -920,7 +1166,7 @@ export default function UserProfileSlide({
                             <span
                               style={{
                                 fontSize: "0.65rem",
-                                color: "rgba(245,230,211,0.3)",
+                                color: "rgba(92,61,46,0.4)",
                                 fontFamily:
                                   "'Libre Baskerville', Georgia, serif",
                               }}
@@ -940,7 +1186,7 @@ export default function UserProfileSlide({
                                     background: "none",
                                     border: "none",
                                     cursor: "pointer",
-                                    color: "rgba(200,169,106,0.45)",
+                                    color: "#D4A853",
                                     fontSize: "0.7rem",
                                     fontFamily:
                                       "'Libre Baskerville', Georgia, serif",
@@ -1020,7 +1266,7 @@ export default function UserProfileSlide({
                     style={{
                       textAlign: "center",
                       padding: "3rem 0",
-                      color: "rgba(245,230,211,0.3)",
+                      color: "rgba(92,61,46,0.4)",
                       fontFamily: "'Cormorant Garamond', Georgia, serif",
                       fontStyle: "italic",
                       fontSize: "1rem",
@@ -1066,7 +1312,7 @@ export default function UserProfileSlide({
                               fontFamily: "'Playfair Display', Georgia, serif",
                               fontSize: "0.9rem",
                               fontWeight: 700,
-                              color: "#F5E6D3",
+                              color: "#3D2B1F",
                               margin: 0,
                             }}
                           >
@@ -1084,7 +1330,7 @@ export default function UserProfileSlide({
                                 fontSize: "0.6rem",
                                 color: note.isPublic
                                   ? "rgba(200,169,106,0.6)"
-                                  : "rgba(245,230,211,0.25)",
+                                  : "#8B6F47",
                                 fontFamily:
                                   "'Libre Baskerville', Georgia, serif",
                                 letterSpacing: "0.08em",
@@ -1103,7 +1349,7 @@ export default function UserProfileSlide({
                                     background: "none",
                                     border: "none",
                                     cursor: "pointer",
-                                    color: "rgba(200,169,106,0.45)",
+                                    color: "#D4A853",
                                     fontSize: "0.7rem",
                                     fontFamily:
                                       "'Libre Baskerville', Georgia, serif",
@@ -1160,7 +1406,7 @@ export default function UserProfileSlide({
                             fontFamily: "'Cormorant Garamond', Georgia, serif",
                             fontStyle: "italic",
                             fontSize: "0.88rem",
-                            color: "rgba(245,230,211,0.6)",
+                            color: "#8B6F47",
                             lineHeight: 1.65,
                             whiteSpace: "pre-line",
                             overflow: "hidden",
@@ -1174,7 +1420,7 @@ export default function UserProfileSlide({
                         <p
                           style={{
                             fontSize: "0.62rem",
-                            color: "rgba(245,230,211,0.25)",
+                            color: "rgba(92,61,46,0.4)",
                             fontFamily: "'Libre Baskerville', Georgia, serif",
                             marginTop: "0.4rem",
                           }}
@@ -1203,7 +1449,7 @@ export default function UserProfileSlide({
                     style={{
                       textAlign: "center",
                       padding: "3rem 0",
-                      color: "rgba(245,230,211,0.3)",
+                      color: "rgba(92,61,46,0.4)",
                       fontFamily: "'Cormorant Garamond', Georgia, serif",
                       fontStyle: "italic",
                       fontSize: "1rem",
@@ -1249,7 +1495,7 @@ export default function UserProfileSlide({
                         <span
                           style={{
                             fontSize: "0.65rem",
-                            color: "rgba(200,169,106,0.5)",
+                            color: "#8B6F47",
                             fontFamily: "'Libre Baskerville', Georgia, serif",
                           }}
                         >
@@ -1258,7 +1504,7 @@ export default function UserProfileSlide({
                         <span
                           style={{
                             fontSize: "0.6rem",
-                            color: "rgba(245,230,211,0.25)",
+                            color: "rgba(92,61,46,0.4)",
                           }}
                         >
                           · ❤️ {post.likes}
@@ -1270,7 +1516,7 @@ export default function UserProfileSlide({
                             fontFamily: "'Playfair Display', Georgia, serif",
                             fontSize: "0.88rem",
                             fontWeight: 700,
-                            color: "#F5E6D3",
+                            color: "#3D2B1F",
                             marginBottom: "0.25rem",
                           }}
                         >
@@ -1282,7 +1528,7 @@ export default function UserProfileSlide({
                           fontFamily: "'Cormorant Garamond', Georgia, serif",
                           fontStyle: "italic",
                           fontSize: "0.85rem",
-                          color: "rgba(245,230,211,0.55)",
+                          color: "#8B6F47",
                           lineHeight: 1.65,
                           whiteSpace: "pre-line",
                           overflow: "hidden",
@@ -1316,7 +1562,7 @@ export default function UserProfileSlide({
                     fontFamily: "'Cormorant Garamond', Georgia, serif",
                     fontStyle: "italic",
                     fontSize: "1rem",
-                    color: "rgba(245,230,211,0.45)",
+                    color: "rgba(92,61,46,0.5)",
                   }}
                 >
                   View and manage all your private messages.
@@ -1336,6 +1582,10 @@ export default function UserProfileSlide({
                 </button>
               </div>
             )}
+            {/* Saved tab */}
+            {activeTab === "saved" && (
+              <SavedItemsTab viewUsername={viewUsername} isOwn={isOwn} />
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -1344,8 +1594,8 @@ export default function UserProfileSlide({
       <Dialog open={!!expandedPost} onOpenChange={() => setExpandedPost(null)}>
         <DialogContent
           style={{
-            background: "#1A1410",
-            border: "1px solid rgba(200,169,106,0.2)",
+            background: "#F5ECD7",
+            border: "1px solid rgba(139,111,71,0.3)",
             maxWidth: 600,
             maxHeight: "80vh",
             overflowY: "auto",
@@ -1356,7 +1606,7 @@ export default function UserProfileSlide({
             <DialogTitle
               style={{
                 fontFamily: "'Playfair Display', Georgia, serif",
-                color: "#F5E6D3",
+                color: "#3D2B1F",
                 fontSize: "1.2rem",
               }}
             >
@@ -1367,7 +1617,7 @@ export default function UserProfileSlide({
             style={{
               fontFamily: "'Cormorant Garamond', Georgia, serif",
               fontStyle: "italic",
-              color: "rgba(229,231,235,0.82)",
+              color: "#3D2B1F",
               fontSize: "0.95rem",
               lineHeight: 2,
               whiteSpace: "pre-wrap",
@@ -1386,8 +1636,8 @@ export default function UserProfileSlide({
       >
         <DialogContent
           style={{
-            background: "#1A1410",
-            border: "1px solid rgba(200,169,106,0.2)",
+            background: "#F5ECD7",
+            border: "1px solid rgba(139,111,71,0.3)",
             maxWidth: 380,
           }}
           data-ocid="profile.posts.dialog"
@@ -1396,7 +1646,7 @@ export default function UserProfileSlide({
             <DialogTitle
               style={{
                 fontFamily: "'Playfair Display', Georgia, serif",
-                color: "#F5E6D3",
+                color: "#3D2B1F",
                 fontSize: "1.1rem",
               }}
             >
@@ -1407,7 +1657,7 @@ export default function UserProfileSlide({
             style={{
               fontFamily: "'Libre Baskerville', Georgia, serif",
               fontSize: "0.82rem",
-              color: "rgba(245,230,211,0.55)",
+              color: "#8B6F47",
               marginTop: "0.5rem",
             }}
           >
@@ -1425,7 +1675,7 @@ export default function UserProfileSlide({
               type="button"
               onClick={() => setConfirmDeletePost(null)}
               data-ocid="profile.posts.cancel_button"
-              style={{ ...GoldBtn, color: "rgba(245,230,211,0.45)" }}
+              style={{ ...GoldBtn, color: "rgba(92,61,46,0.5)" }}
             >
               Cancel
             </button>
@@ -1455,8 +1705,8 @@ export default function UserProfileSlide({
       >
         <DialogContent
           style={{
-            background: "#1A1410",
-            border: "1px solid rgba(200,169,106,0.2)",
+            background: "#F5ECD7",
+            border: "1px solid rgba(139,111,71,0.3)",
             maxWidth: 500,
           }}
           data-ocid="profile.notes.dialog"
@@ -1465,7 +1715,7 @@ export default function UserProfileSlide({
             <DialogTitle
               style={{
                 fontFamily: "'Playfair Display', Georgia, serif",
-                color: "#F5E6D3",
+                color: "#3D2B1F",
                 fontSize: "1.1rem",
               }}
             >
@@ -1488,7 +1738,7 @@ export default function UserProfileSlide({
                   fontSize: "0.63rem",
                   letterSpacing: "0.1em",
                   textTransform: "uppercase",
-                  color: "rgba(200,169,106,0.55)",
+                  color: "#D4A853",
                   display: "block",
                   marginBottom: "0.3rem",
                 }}
@@ -1518,7 +1768,7 @@ export default function UserProfileSlide({
                   fontSize: "0.63rem",
                   letterSpacing: "0.1em",
                   textTransform: "uppercase",
-                  color: "rgba(200,169,106,0.55)",
+                  color: "#D4A853",
                   display: "block",
                   marginBottom: "0.3rem",
                 }}
@@ -1565,7 +1815,7 @@ export default function UserProfileSlide({
                 style={{
                   fontFamily: "'Libre Baskerville', Georgia, serif",
                   fontSize: "0.75rem",
-                  color: "rgba(245,230,211,0.6)",
+                  color: "#8B6F47",
                 }}
               >
                 Make this note public (visible on your profile)
@@ -1582,7 +1832,7 @@ export default function UserProfileSlide({
                 type="button"
                 onClick={() => setShowNoteForm(false)}
                 data-ocid="profile.notes.cancel_button"
-                style={{ ...GoldBtn, color: "rgba(245,230,211,0.45)" }}
+                style={{ ...GoldBtn, color: "rgba(92,61,46,0.5)" }}
               >
                 Cancel
               </button>
@@ -1617,7 +1867,7 @@ export default function UserProfileSlide({
         >
           <div
             style={{
-              background: "#1A1410",
+              background: "#F5ECD7",
               border: "1px solid rgba(200,169,106,0.25)",
               borderRadius: 14,
               padding: "1.5rem",
@@ -1631,7 +1881,7 @@ export default function UserProfileSlide({
             <h3
               style={{
                 fontFamily: "'Playfair Display', Georgia, serif",
-                color: "#C8A96A",
+                color: "#D4A853",
                 margin: 0,
               }}
             >
@@ -1672,7 +1922,7 @@ export default function UserProfileSlide({
                         alignItems: "center",
                         justifyContent: "center",
                         minHeight: 240,
-                        color: "rgba(245,230,211,0.4)",
+                        color: "rgba(92,61,46,0.5)",
                         fontFamily: "'Libre Baskerville', Georgia, serif",
                         fontSize: "0.85rem",
                       }}
@@ -1687,7 +1937,7 @@ export default function UserProfileSlide({
                         alignItems: "center",
                         justifyContent: "center",
                         minHeight: 240,
-                        color: "#C8A96A",
+                        color: "#D4A853",
                         fontFamily: "'Libre Baskerville', Georgia, serif",
                         fontSize: "0.85rem",
                       }}
@@ -1726,11 +1976,11 @@ export default function UserProfileSlide({
                     onClick={() => camera.switchCamera()}
                     data-ocid="profile.toggle"
                     style={{
-                      background: "rgba(255,255,255,0.06)",
+                      background: "rgba(255,248,238,0.9)",
                       border: "1px solid rgba(255,255,255,0.1)",
                       borderRadius: 7,
                       padding: "0.55rem 0.75rem",
-                      color: "rgba(245,230,211,0.65)",
+                      color: "#8B6F47",
                       fontFamily: "'Libre Baskerville', Georgia, serif",
                       fontSize: "0.82rem",
                       cursor: "pointer",
@@ -1765,11 +2015,11 @@ export default function UserProfileSlide({
                     onClick={() => setCapturedPhoto(null)}
                     data-ocid="profile.secondary_button"
                     style={{
-                      background: "rgba(255,255,255,0.06)",
+                      background: "rgba(255,248,238,0.9)",
                       border: "1px solid rgba(255,255,255,0.1)",
                       borderRadius: 7,
                       padding: "0.55rem 0.75rem",
-                      color: "rgba(245,230,211,0.65)",
+                      color: "#8B6F47",
                       fontFamily: "'Libre Baskerville', Georgia, serif",
                       fontSize: "0.82rem",
                       cursor: "pointer",
@@ -1788,7 +2038,7 @@ export default function UserProfileSlide({
                   border: "1px solid rgba(245,230,211,0.12)",
                   borderRadius: 7,
                   padding: "0.55rem 0.75rem",
-                  color: "rgba(245,230,211,0.45)",
+                  color: "rgba(92,61,46,0.5)",
                   fontFamily: "'Libre Baskerville', Georgia, serif",
                   fontSize: "0.82rem",
                   cursor: "pointer",

@@ -1,7 +1,7 @@
 import { Check, Edit2, Mail, Pencil, X } from "lucide-react";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
-import { SiInstagram, SiX, SiYoutube } from "react-icons/si";
+import { SiX, SiYoutube } from "react-icons/si";
 import { toast } from "sonner";
 import { useActor } from "../hooks/useActor";
 
@@ -215,16 +215,17 @@ export default function AboutSlide() {
   });
 
   useEffect(() => {
-    if (!actor) return;
+    if (!actor || typeof (actor as any).get_about_content !== "function")
+      return;
     (actor as any)
-      .getAboutContent()
-      .then((data) => {
+      .get_about_content()
+      .then((data: any) => {
         if (data) {
           setAboutFields((prev) => ({
-            poetName: data.poetName || "CHINNUA_POET",
+            poetName: data.poetName || prev.poetName,
             bio: data.bio || prev.bio,
             story: data.story || prev.story,
-            poetryFragments: data.poetryFragments || "",
+            poetryFragments: data.poetryFragments || prev.poetryFragments,
           }));
         }
       })
@@ -591,7 +592,7 @@ export default function AboutSlide() {
               }}
             >
               <img
-                src="/assets/uploads/chatgpt_image_mar_27_2026_05_29_47_pm-019d334d-3cb3-70a1-9f7f-ccdf89ed6a6d-1.png"
+                src="/assets/generated/chinnua-profile-hero.dim_600x800.png"
                 alt="Chinnua"
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
@@ -664,45 +665,24 @@ export default function AboutSlide() {
               "I exist… but not everyone gets to see me."
             </p>
 
-            <p
-              style={{
-                fontFamily: "'Playfair Display', Georgia, serif",
-                color: "rgba(61,43,31,0.65)",
-                lineHeight: 1.9,
-                fontSize: "0.95rem",
-                marginBottom: "0.75rem",
-              }}
-            >
-              Chinnua is a poet and storyteller whose words dance between
-              worlds.
-            </p>
-            <p
-              style={{
-                fontFamily: "'Playfair Display', Georgia, serif",
-                color: "rgba(61,43,31,0.65)",
-                lineHeight: 1.9,
-                fontSize: "0.95rem",
-                marginBottom: "0.75rem",
-              }}
-            >
-              With a gift for transforming ordinary moments into extraordinary
-              verse, Chinnua's poetry explores the depth of human emotion, the
-              beauty of nature, and the quiet power of silence. Each poem is an
-              invitation to pause, feel, and remember.
-            </p>
-            <p
-              style={{
-                fontFamily: "'Playfair Display', Georgia, serif",
-                color: "rgba(61,43,31,0.65)",
-                lineHeight: 1.9,
-                fontSize: "0.95rem",
-                marginBottom: "1.75rem",
-              }}
-            >
-              Drawing from lived experience and universal longing, the work
-              speaks to anyone who has loved, lost, waited, or wondered — which
-              is to say, everyone.
-            </p>
+            {aboutFields.bio.split("\n\n").map((para, i) => {
+              const parts = aboutFields.bio.split("\n\n");
+              return (
+                <p
+                  key={para.slice(0, 20) || String(i)}
+                  style={{
+                    fontFamily: "'Playfair Display', Georgia, serif",
+                    color: "rgba(61,43,31,0.75)",
+                    lineHeight: 1.9,
+                    fontSize: "0.95rem",
+                    marginBottom:
+                      i === parts.length - 1 ? "1.75rem" : "0.75rem",
+                  }}
+                >
+                  {para}
+                </p>
+              );
+            })}
 
             {/* Poetic lines block */}
             <motion.div
@@ -790,11 +770,6 @@ export default function AboutSlide() {
                 Connect
               </h4>
               {[
-                {
-                  Icon: SiInstagram,
-                  href: "https://www.instagram.com/chinnua_07_/",
-                  label: "@chinnua_07_",
-                },
                 {
                   Icon: SiYoutube,
                   href: "https://www.youtube.com/@ChinnuaPoetofficial",
@@ -979,9 +954,7 @@ export default function AboutSlide() {
                   style={{
                     fontFamily: "'Playfair Display', Georgia, serif",
                     fontStyle: "italic",
-                    color: poetsNote
-                      ? "rgba(61,43,31,0.65)"
-                      : "rgba(229,231,235,0.35)",
+                    color: poetsNote ? "rgba(61,43,31,0.65)" : "#8B6F47",
                     fontSize: "0.88rem",
                     lineHeight: 1.7,
                     whiteSpace: "pre-line",
