@@ -23,6 +23,7 @@ import PrivacySlide from "./slides/PrivacySlide";
 import SettingsSlide, { applyTheme } from "./slides/SettingsSlide";
 import TermsSlide from "./slides/TermsSlide";
 import UserProfileSlide from "./slides/UserProfileSlide";
+import { updatePresence } from "./utils/presence";
 
 type Slide =
   | "home"
@@ -86,24 +87,32 @@ function UserIcon({ color }: { color: string }) {
   );
 }
 
-// Warm theme constants
-const WARM_BG = "#FFF8EE";
-const WARM_PAPER = "#F5ECD7";
-const WARM_BROWN = "#8B6F47";
-const WARM_MOCHA = "#5C3D2E";
-const WARM_GOLD = "#D4A853";
-const WARM_TEXT = "#3D2B1F";
-const WARM_MUTED = "rgba(92,61,46,0.5)";
-const WARM_BORDER = "rgba(139,111,71,0.25)";
+// Warm theme constants — use CSS variables so theme switching works
+const WARM_BG = "var(--theme-bg)";
+const WARM_PAPER = "var(--theme-paper)";
+const WARM_BROWN = "var(--theme-muted)";
+const WARM_MOCHA = "var(--theme-mocha)";
+const WARM_GOLD = "var(--theme-gold)";
+const WARM_TEXT = "var(--theme-text)";
+const WARM_MUTED = "var(--theme-muted)";
+const WARM_BORDER = "var(--theme-border)";
 
 export default function App() {
   const [activeSlide, setActiveSlide] = useState<Slide>("home");
   const [adminClickCount, setAdminClickCount] = useState(0);
   const [showUserSetup, setShowUserSetup] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    // Restore session from localStorage on initial load
+    try {
+      const saved = localStorage.getItem("chinnua_current_user");
+      if (saved) return JSON.parse(saved) as User;
+    } catch {}
+    return null;
+  });
   const [isMobile, setIsMobile] = useState(false);
   const [profileUsername, setProfileUsername] = useState<string | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     // Auto-follow admin on startup for all users
@@ -145,15 +154,35 @@ export default function App() {
     ];
     const hash = window.location.hash.replace("#", "");
     if (hash && validSlides.includes(hash)) setActiveSlide(hash as Slide);
-    try {
-      const stored = localStorage.getItem("chinnua_user");
-      if (stored) setCurrentUser(JSON.parse(stored));
-    } catch {}
     const check = () => setIsMobile(window.innerWidth < 768);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
   }, []);
+
+  // Presence tracking: update on activity
+  useEffect(() => {
+    if (!currentUser?.username) return;
+    const handler = () => updatePresence(currentUser.username);
+    handler(); // update immediately on login
+    window.addEventListener("mousemove", handler);
+    window.addEventListener("keydown", handler);
+    return () => {
+      window.removeEventListener("mousemove", handler);
+      window.removeEventListener("keydown", handler);
+    };
+  }, [currentUser?.username]);
+
+  // Unread messages: listen for newMessage events when not on messages slide
+  useEffect(() => {
+    const handler = (_e: Event) => {
+      if (activeSlide !== "messages") {
+        setUnreadCount((c) => c + 1);
+      }
+    };
+    window.addEventListener("newMessage", handler);
+    return () => window.removeEventListener("newMessage", handler);
+  }, [activeSlide]);
 
   // AI enabled state
   const [aiEnabled, setAiEnabled] = useState(() => {
@@ -242,12 +271,68 @@ export default function App() {
       document.documentElement.setAttribute("data-theme", saved);
     }
 
+    // Restore settings (font/size CSS vars) on startup
+    try {
+      const savedSettings =
+        localStorage.getItem("chinnua_user_settings") ||
+        localStorage.getItem("chinnua_settings");
+      if (savedSettings) {
+        const s = JSON.parse(savedSettings);
+        const root = document.documentElement;
+        if (s.textSize) {
+          const sz =
+            s.textSize === "small"
+              ? "14px"
+              : s.textSize === "large"
+                ? "18px"
+                : "16px";
+          root.style.setProperty("--theme-font-size-base", sz);
+          root.style.setProperty("--theme-text-size", sz);
+          document.body.style.fontSize = sz;
+        }
+        if (s.fontStyle) {
+          const fam =
+            s.fontStyle === "soft"
+              ? "'Lora', Georgia, serif"
+              : "'Playfair Display', Georgia, serif";
+          root.style.setProperty("--theme-font-family", fam);
+          root.style.setProperty("--theme-font", fam);
+          document.body.style.fontFamily = fam;
+        }
+      }
+    } catch {}
+
     // Listen for settings changes
     const handleSettings = (e: CustomEvent) => {
       const s = e.detail;
       if (s) {
         setAiEnabled(s.aiEnabled !== false);
         setAiTranslationEnabled(s.aiTranslation !== false);
+        // Reapply theme, font, and text size immediately
+        if (s.theme) {
+          applyTheme(s.theme as any);
+        }
+        const root = document.documentElement;
+        if (s.textSize) {
+          const sz =
+            s.textSize === "small"
+              ? "14px"
+              : s.textSize === "large"
+                ? "18px"
+                : "16px";
+          root.style.setProperty("--theme-text-size", sz);
+          root.style.setProperty("--theme-font-size-base", sz);
+          document.body.style.fontSize = sz;
+        }
+        if (s.fontStyle) {
+          const fam =
+            s.fontStyle === "soft"
+              ? "'Lora', Georgia, serif"
+              : "'Playfair Display', Georgia, serif";
+          root.style.setProperty("--theme-font", fam);
+          root.style.setProperty("--theme-font-family", fam);
+          document.body.style.fontFamily = fam;
+        }
       }
     };
     window.addEventListener("settingsChanged", handleSettings as EventListener);
@@ -298,6 +383,8 @@ export default function App() {
         createdAt: new Date().toISOString(),
       };
       localStorage.setItem("chinnua_user", JSON.stringify(user));
+      // Persist session across refreshes
+      localStorage.setItem("chinnua_current_user", JSON.stringify(user));
       try {
         const users: User[] = JSON.parse(
           localStorage.getItem("chinnua_users") || "[]",
@@ -323,12 +410,15 @@ export default function App() {
       bio: user.bio ?? "",
       createdAt: user.createdAt,
     };
+    // Persist session across browser refreshes
+    localStorage.setItem("chinnua_current_user", JSON.stringify(u));
     setCurrentUser(u);
     setShowLoginModal(false);
   };
 
   const handleLogout = () => {
     localStorage.removeItem("chinnua_user");
+    localStorage.removeItem("chinnua_current_user");
     setCurrentUser(null);
     if (
       activeSlide === "notes" ||
@@ -344,6 +434,7 @@ export default function App() {
     } else if (slide !== "profile") {
       setProfileUsername(null);
     }
+    if (slide === "messages") setUnreadCount(0);
     setActiveSlide(slide);
     window.location.hash = slide;
   };
@@ -380,18 +471,42 @@ export default function App() {
           <MessagesSlide
             currentUser={currentUser}
             onJoin={() => setShowUserSetup(true)}
-            onLogin={() => setShowLoginModal(true)}
+            onLogin={handleLogin}
           />
         );
       case "about":
         return <AboutSlide />;
       case "explore":
-        return <ExploreSlide currentUser={currentUser} />;
+        return (
+          <ExploreSlide
+            currentUser={currentUser}
+            onNavigate={(slide: string, extra?: Record<string, string>) => {
+              if (extra?.username) setProfileUsername(extra.username);
+              if (extra?.openUser) {
+                sessionStorage.setItem(
+                  "chinnua_open_user_chat",
+                  extra.openUser,
+                );
+              }
+              setActiveSlide(slide as any);
+            }}
+          />
+        );
       case "notifications":
         return (
           <NotificationsSlide
             currentUser={currentUser}
             onLogin={() => setShowLoginModal(true)}
+            onNavigate={(slide: string, extra?: Record<string, string>) => {
+              if (extra?.username) setProfileUsername(extra.username);
+              if (extra?.openUser) {
+                sessionStorage.setItem(
+                  "chinnua_open_user_chat",
+                  extra.openUser,
+                );
+              }
+              setActiveSlide(slide as any);
+            }}
           />
         );
       case "notes":
@@ -602,7 +717,37 @@ export default function App() {
                     transition: "color 0.2s",
                   }}
                 >
-                  {item.label}
+                  {item.label === "Messages" && unreadCount > 0 ? (
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.3rem",
+                      }}
+                    >
+                      Messages
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          background: "#e53935",
+                          color: "#fff",
+                          borderRadius: "50%",
+                          minWidth: 16,
+                          height: 16,
+                          fontSize: "0.55rem",
+                          fontFamily: "sans-serif",
+                          fontWeight: 700,
+                          padding: "0 3px",
+                        }}
+                      >
+                        {unreadCount > 9 ? "9+" : unreadCount}
+                      </span>
+                    </span>
+                  ) : (
+                    item.label
+                  )}
                 </span>
               </button>
             ))}
@@ -830,7 +975,37 @@ export default function App() {
                   whiteSpace: "nowrap",
                 }}
               >
-                {item.label}
+                {item.label === "Messages" && unreadCount > 0 ? (
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.2rem",
+                    }}
+                  >
+                    Msg
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "#e53935",
+                        color: "#fff",
+                        borderRadius: "50%",
+                        minWidth: 12,
+                        height: 12,
+                        fontSize: "0.4rem",
+                        fontFamily: "sans-serif",
+                        fontWeight: 700,
+                        padding: "0 2px",
+                      }}
+                    >
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  </span>
+                ) : (
+                  item.label
+                )}
               </span>
             </button>
           ))}

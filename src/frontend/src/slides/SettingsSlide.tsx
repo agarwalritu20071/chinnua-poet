@@ -1,4 +1,27 @@
+import {
+  BarChart2,
+  Bell,
+  Bot,
+  Camera,
+  Globe,
+  HelpCircle,
+  Image,
+  Lock,
+  LogOut,
+  Mail,
+  MessageCircle,
+  Moon,
+  NotebookPen,
+  Palette,
+  PenTool,
+  Settings,
+  Shield,
+  Star,
+  Sun,
+  User,
+} from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import type React from "react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useCamera } from "../camera/useCamera";
@@ -26,7 +49,7 @@ interface UserSettings {
   theme: "warm-cream" | "midnight" | "forest" | "ocean" | "rose" | "ink";
   fontStyle: "classic" | "soft";
   textSize: "small" | "medium" | "large";
-  writingMode: "free" | "structured";
+  writingMode: "default" | "free" | "structured";
   autoSave: boolean;
   writingSuggestions: boolean;
   aiEnabled: boolean;
@@ -69,7 +92,7 @@ const defaultSettings: UserSettings = {
   theme: "warm-cream",
   fontStyle: "classic",
   textSize: "medium",
-  writingMode: "free",
+  writingMode: "default",
   autoSave: true,
   writingSuggestions: true,
   aiEnabled: true,
@@ -172,24 +195,50 @@ export function applyTheme(theme: keyof typeof THEME_PALETTES) {
   document.body.style.color = p.text;
   document.documentElement.setAttribute("data-theme", theme);
   localStorage.setItem("chinnua_theme", theme);
+  // Also apply font/size from saved settings
+  try {
+    const s = JSON.parse(localStorage.getItem("chinnua_user_settings") || "{}");
+    if (s.fontStyle) {
+      root.style.setProperty(
+        "--theme-font",
+        s.fontStyle === "soft"
+          ? "'Lora', Georgia, serif"
+          : "'Playfair Display', Georgia, serif",
+      );
+      document.body.style.fontFamily =
+        s.fontStyle === "soft"
+          ? "'Lora', Georgia, serif"
+          : "'Playfair Display', Georgia, serif";
+    }
+    if (s.textSize) {
+      const sz =
+        s.textSize === "small"
+          ? "14px"
+          : s.textSize === "large"
+            ? "18px"
+            : "16px";
+      root.style.setProperty("--theme-text-size", sz);
+      document.body.style.fontSize = sz;
+    }
+  } catch {}
   window.dispatchEvent(new CustomEvent("themeChanged", { detail: p }));
 }
 
-const SECTIONS = [
-  { id: "profile", icon: "👤", label: "Profile" },
-  { id: "privacy", icon: "🔒", label: "Privacy" },
-  { id: "notifications", icon: "🔔", label: "Notifications" },
-  { id: "appearance", icon: "🎨", label: "Appearance" },
-  { id: "writing", icon: "✍️", label: "Writing" },
-  { id: "ai", icon: "🤖", label: "AI Assistant" },
-  { id: "messaging", icon: "💬", label: "Messaging" },
-  { id: "content", icon: "🖼️", label: "Content" },
-  { id: "language", icon: "🌐", label: "Language" },
-  { id: "notes", icon: "📓", label: "Notes" },
-  { id: "help", icon: "❓", label: "Help Centre" },
-  { id: "security", icon: "🔐", label: "Security" },
-  { id: "email", icon: "📩", label: "Email" },
-  { id: "account", icon: "🚪", label: "Account" },
+const SECTIONS: { id: string; icon: React.ReactNode; label: string }[] = [
+  { id: "profile", icon: <User size={15} />, label: "Profile" },
+  { id: "privacy", icon: <Lock size={15} />, label: "Privacy" },
+  { id: "notifications", icon: <Bell size={15} />, label: "Notifications" },
+  { id: "appearance", icon: <Palette size={15} />, label: "Appearance" },
+  { id: "writing", icon: <PenTool size={15} />, label: "Writing" },
+  { id: "ai", icon: <Bot size={15} />, label: "AI Assistant" },
+  { id: "messaging", icon: <MessageCircle size={15} />, label: "Messaging" },
+  { id: "content", icon: <Image size={15} />, label: "Content" },
+  { id: "language", icon: <Globe size={15} />, label: "Language" },
+  { id: "notes", icon: <NotebookPen size={15} />, label: "Notes" },
+  { id: "help", icon: <HelpCircle size={15} />, label: "Help Centre" },
+  { id: "security", icon: <Shield size={15} />, label: "Security" },
+  { id: "email", icon: <Mail size={15} />, label: "Email" },
+  { id: "account", icon: <LogOut size={15} />, label: "Account" },
 ];
 
 const FAQ_ITEMS = [
@@ -203,7 +252,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "How do I use the translator?",
-    a: "Click the 🌐 globe icon in the navigation bar to select your language. The entire website — including poems — will be translated.",
+    a: "Click the globe icon (🌐) in the navigation bar to select your language. The entire website — including poems — will be translated.",
   },
   {
     q: "What is The Silent Guardian?",
@@ -220,14 +269,14 @@ const FAQ_ITEMS = [
 ];
 
 const colors = {
-  bg: "#FFF8EE",
-  paper: "#F5ECD7",
-  brown: "#8B6F47",
-  mocha: "#5C3D2E",
-  gold: "#D4A853",
-  text: "#3D2B1F",
-  muted: "rgba(92,61,46,0.5)",
-  border: "rgba(139,111,71,0.25)",
+  bg: "var(--theme-bg)",
+  paper: "var(--theme-paper)",
+  brown: "var(--theme-muted)",
+  mocha: "var(--theme-mocha)",
+  gold: "var(--theme-gold)",
+  text: "var(--theme-text)",
+  muted: "var(--theme-muted)",
+  border: "var(--theme-border)",
 };
 
 function Toggle({
@@ -278,7 +327,7 @@ function Toggle({
           width: 44,
           height: 24,
           borderRadius: 12,
-          background: checked ? colors.gold : "rgba(139,111,71,0.25)",
+          background: checked ? "var(--theme-gold)" : "var(--theme-border)",
           position: "relative",
           transition: "background 0.3s",
           flexShrink: 0,
@@ -307,7 +356,7 @@ function SectionCard({
   title,
   icon,
   children,
-}: { title: string; icon: string; children: React.ReactNode }) {
+}: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
     <div
       style={{
@@ -316,7 +365,7 @@ function SectionCard({
         padding: "1.5rem",
         marginBottom: "1.5rem",
         boxShadow: "0 2px 12px rgba(92,61,46,0.08)",
-        border: "1px solid rgba(139,111,71,0.25)",
+        border: "1px solid var(--theme-border)",
       }}
     >
       <h2
@@ -381,7 +430,39 @@ export default function SettingsSlide({
     key: K,
     value: UserSettings[K],
   ) => {
-    setSettings((prev) => ({ ...prev, [key]: value }));
+    setSettings((prev) => {
+      const next = { ...prev, [key]: value };
+      localStorage.setItem("chinnua_user_settings", JSON.stringify(next));
+      localStorage.setItem("chinnua_settings", JSON.stringify(next));
+      // Apply theme immediately
+      if (key === "theme") {
+        applyTheme(value as keyof typeof THEME_PALETTES);
+      }
+      // Apply font/size CSS vars immediately
+      if (key === "textSize") {
+        const sz =
+          value === "small" ? "14px" : value === "large" ? "18px" : "16px";
+        document.documentElement.style.setProperty(
+          "--theme-font-size-base",
+          sz,
+        );
+        document.documentElement.style.setProperty("--theme-text-size", sz);
+        document.body.style.fontSize = sz;
+      }
+      if (key === "fontStyle") {
+        const fam =
+          value === "soft"
+            ? "'Lora', Georgia, serif"
+            : "'Playfair Display', Georgia, serif";
+        document.documentElement.style.setProperty("--theme-font-family", fam);
+        document.documentElement.style.setProperty("--theme-font", fam);
+        document.body.style.fontFamily = fam;
+      }
+      window.dispatchEvent(
+        new CustomEvent("settingsChanged", { detail: next }),
+      );
+      return next;
+    });
   };
 
   const saveAll = () => {
@@ -432,7 +513,7 @@ export default function SettingsSlide({
   const inputStyle: React.CSSProperties = {
     width: "100%",
     background: colors.bg,
-    border: "1px solid rgba(139,111,71,0.25)",
+    border: "1px solid var(--theme-border)",
     borderRadius: 8,
     padding: "0.6rem 0.8rem",
     fontFamily: "'Lora', serif",
@@ -493,7 +574,7 @@ export default function SettingsSlide({
     switch (activeSection) {
       case "profile":
         return (
-          <SectionCard title="Profile Settings" icon="👤">
+          <SectionCard title="Profile Settings" icon={<User size={16} />}>
             {settings.profilePhoto && (
               <div style={{ textAlign: "center", marginBottom: "1rem" }}>
                 <img
@@ -556,7 +637,7 @@ export default function SettingsSlide({
                 }}
                 data-ocid="settings.profile_photo.upload_button"
               >
-                📁 Upload from Device
+                Upload from Device
               </button>
               <button
                 type="button"
@@ -573,7 +654,7 @@ export default function SettingsSlide({
                 }}
                 data-ocid="settings.profile_photo_camera.button"
               >
-                📷 Capture from Camera
+                Capture from Camera
               </button>
             </div>
             <input
@@ -602,7 +683,7 @@ export default function SettingsSlide({
                     width: "100%",
                     maxWidth: 240,
                     borderRadius: 12,
-                    border: "1px solid rgba(139,111,71,0.25)",
+                    border: "1px solid var(--theme-border)",
                   }}
                 >
                   <track kind="captions" />
@@ -621,13 +702,13 @@ export default function SettingsSlide({
                     style={{
                       padding: "0.4rem 0.8rem",
                       borderRadius: 8,
-                      background: colors.gold,
+                      background: "var(--theme-gold)",
                       border: "none",
-                      color: "#3D2B1F",
+                      color: "var(--theme-bg)",
                       cursor: "pointer",
                     }}
                   >
-                    📸 Take Photo
+                    Take Photo
                   </button>
                   <button
                     type="button"
@@ -639,7 +720,7 @@ export default function SettingsSlide({
                       padding: "0.4rem 0.8rem",
                       borderRadius: 8,
                       background: "transparent",
-                      border: "1px solid rgba(139,111,71,0.25)",
+                      border: "1px solid var(--theme-border)",
                       color: colors.muted,
                       cursor: "pointer",
                     }}
@@ -656,7 +737,7 @@ export default function SettingsSlide({
               style={{
                 padding: "0.5rem 1rem",
                 borderRadius: 8,
-                border: "1px solid rgba(139,111,71,0.25)",
+                border: "1px solid var(--theme-border)",
                 background: "transparent",
                 color: colors.muted,
                 fontFamily: "'Lora', serif",
@@ -666,7 +747,15 @@ export default function SettingsSlide({
               }}
               data-ocid="settings.cover_image.upload_button"
             >
-              🖼️ Upload Cover Image
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                }}
+              >
+                <Image size={14} /> Upload Cover Image
+              </span>
             </button>
             <input
               ref={coverRef}
@@ -695,9 +784,9 @@ export default function SettingsSlide({
                 width: "100%",
                 padding: "0.75rem",
                 borderRadius: 10,
-                background: colors.gold,
+                background: "var(--theme-gold)",
                 border: "none",
-                color: "#3D2B1F",
+                color: "var(--theme-bg)",
                 fontFamily: "'Playfair Display', serif",
                 fontSize: "1rem",
                 cursor: "pointer",
@@ -713,7 +802,7 @@ export default function SettingsSlide({
 
       case "privacy":
         return (
-          <SectionCard title="Privacy Settings" icon="🔒">
+          <SectionCard title="Privacy Settings" icon={<Lock size={16} />}>
             <p style={labelStyle}>Account Visibility</p>
             <div style={radioGroupStyle}>
               {radioOption("public", settings.accountVisibility, "Public", () =>
@@ -769,7 +858,7 @@ export default function SettingsSlide({
                 borderRadius: 8,
                 background: colors.gold,
                 border: "none",
-                color: "#3D2B1F",
+                color: "var(--theme-bg)",
                 cursor: "pointer",
                 fontFamily: "'Lora', serif",
               }}
@@ -782,7 +871,7 @@ export default function SettingsSlide({
 
       case "notifications":
         return (
-          <SectionCard title="Notification Settings" icon="🔔">
+          <SectionCard title="Notification Settings" icon={<Bell size={16} />}>
             <Toggle
               id="notifyLikes"
               checked={settings.notifyLikes}
@@ -822,7 +911,7 @@ export default function SettingsSlide({
                 borderRadius: 8,
                 background: colors.gold,
                 border: "none",
-                color: "#3D2B1F",
+                color: "var(--theme-bg)",
                 cursor: "pointer",
                 fontFamily: "'Lora', serif",
               }}
@@ -835,7 +924,27 @@ export default function SettingsSlide({
 
       case "appearance":
         return (
-          <SectionCard title="Appearance Settings" icon="🎨">
+          <SectionCard title="Appearance Settings" icon={<Palette size={16} />}>
+            <p
+              style={{
+                fontFamily: "'Lora', serif",
+                fontStyle: "italic",
+                fontSize: "0.87rem",
+                color: "var(--theme-muted)",
+                lineHeight: 1.75,
+                marginBottom: "1.4rem",
+                borderLeft: "3px solid rgba(212,168,83,0.4)",
+                paddingLeft: "0.9rem",
+              }}
+            >
+              This space allows you to dress the page in your own colour of
+              feeling — choose from six distinct themes, each carrying its own
+              quiet mood. Select a font that feels like your voice, and let the
+              text breathe at whatever size soothes your eyes. Every change
+              takes effect the moment you choose it. If something doesn't feel
+              quite right after switching, a gentle page refresh will settle the
+              new design into place.
+            </p>
             <p style={labelStyle}>Theme</p>
             <div
               style={{
@@ -931,7 +1040,7 @@ export default function SettingsSlide({
             <div
               style={{
                 background: colors.bg,
-                border: "1px solid rgba(139,111,71,0.25)",
+                border: "1px solid var(--theme-border)",
                 borderRadius: 10,
                 padding: "1rem 1.2rem",
                 marginTop: "0.5rem",
@@ -980,7 +1089,7 @@ export default function SettingsSlide({
                 borderRadius: 8,
                 background: colors.gold,
                 border: "none",
-                color: "#3D2B1F",
+                color: "var(--theme-bg)",
                 cursor: "pointer",
                 fontFamily: "'Lora', serif",
               }}
@@ -993,9 +1102,15 @@ export default function SettingsSlide({
 
       case "writing":
         return (
-          <SectionCard title="Writing Preferences" icon="✍️">
+          <SectionCard title="Writing Preferences" icon={<PenTool size={16} />}>
             <p style={labelStyle}>Default Writing Mode</p>
             <div style={radioGroupStyle}>
+              {radioOption(
+                "default",
+                settings.writingMode,
+                "Default Writing Mode",
+                () => update("writingMode", "default"),
+              )}
               {radioOption("free", settings.writingMode, "Free Verse", () =>
                 update("writingMode", "free"),
               )}
@@ -1004,6 +1119,47 @@ export default function SettingsSlide({
                 settings.writingMode,
                 "Structured",
                 () => update("writingMode", "structured"),
+              )}
+            </div>
+            <div style={{ marginTop: "0.4rem", marginBottom: "0.75rem" }}>
+              {settings.writingMode === "default" && (
+                <p
+                  style={{
+                    fontFamily: "'Lora', serif",
+                    fontStyle: "italic",
+                    fontSize: "0.75rem",
+                    color: "var(--theme-muted)",
+                    margin: 0,
+                  }}
+                >
+                  Standard text area — no special formatting applied
+                </p>
+              )}
+              {settings.writingMode === "free" && (
+                <p
+                  style={{
+                    fontFamily: "'Lora', serif",
+                    fontStyle: "italic",
+                    fontSize: "0.75rem",
+                    color: "var(--theme-muted)",
+                    margin: 0,
+                  }}
+                >
+                  Open, unstructured, flowing — let words fall freely
+                </p>
+              )}
+              {settings.writingMode === "structured" && (
+                <p
+                  style={{
+                    fontFamily: "'Lora', serif",
+                    fontStyle: "italic",
+                    fontSize: "0.75rem",
+                    color: "var(--theme-muted)",
+                    margin: 0,
+                  }}
+                >
+                  Template with title, stanza breaks, and lines
+                </p>
               )}
             </div>
             <Toggle
@@ -1027,7 +1183,7 @@ export default function SettingsSlide({
                 borderRadius: 8,
                 background: colors.gold,
                 border: "none",
-                color: "#3D2B1F",
+                color: "var(--theme-bg)",
                 cursor: "pointer",
                 fontFamily: "'Lora', serif",
               }}
@@ -1040,17 +1196,56 @@ export default function SettingsSlide({
 
       case "ai":
         return (
-          <SectionCard title="The Silent Listener" icon="🤖">
+          <SectionCard title="The Silent Listener" icon={<Bot size={16} />}>
             <p
               style={{
                 fontFamily: "'Lora', serif",
                 fontStyle: "italic",
                 color: colors.gold,
                 fontSize: "0.9rem",
-                marginBottom: "1.2rem",
+                marginBottom: "1rem",
               }}
             >
               "Sometimes silence needs a voice."
+            </p>
+            <p
+              style={{
+                fontFamily: "'Lora', serif",
+                fontStyle: "italic",
+                fontSize: "0.87rem",
+                color: "var(--theme-muted)",
+                lineHeight: 1.75,
+                marginBottom: "0.9rem",
+                borderLeft: "3px solid rgba(212,168,83,0.4)",
+                paddingLeft: "0.9rem",
+              }}
+            >
+              The Silent Listener offers three ways to colour the voice that
+              reads your words aloud. <em>Soft Emotional</em> wraps each line in
+              warmth and gentleness. <em>Deep Philosophical</em> lets the verse
+              breathe slowly, as if pondering the space between words.{" "}
+              <em>Minimal</em> speaks plainly, leaving meaning to linger in
+              silence. Pair it with your preferred voice — male or female — and
+              choose a Playback Speed that matches your inner rhythm: slow and
+              meditative, clear and natural, or lively and expressive.
+            </p>
+            <p
+              style={{
+                fontFamily: "'Lora', serif",
+                fontStyle: "italic",
+                fontSize: "0.87rem",
+                color: "var(--theme-muted)",
+                lineHeight: 1.75,
+                marginBottom: "1.2rem",
+                borderLeft: "3px solid rgba(212,168,83,0.4)",
+                paddingLeft: "0.9rem",
+              }}
+            >
+              Our companion poets — Luna, SilentInk, VelvetWords, and others —
+              may reach out to you directly in Messages, offering a kind word, a
+              writing prompt, or a gentle reflection. They exist to keep you
+              company in the quiet hours, and every message they send is guided
+              by the same care and tone you set here.
             </p>
             <Toggle
               id="aiEnabled"
@@ -1064,129 +1259,338 @@ export default function SettingsSlide({
               onChange={(v) => update("aiAutoSuggest", v)}
               label="Auto-suggest Lines"
             />
+            <p
+              style={{
+                fontFamily: "'Lora', serif",
+                fontStyle: "italic",
+                fontSize: "0.72rem",
+                color: "var(--theme-muted)",
+                margin: "-0.25rem 0 0.6rem 1.8rem",
+              }}
+            >
+              Active in: Notes
+            </p>
             <Toggle
               id="aiWritingSug"
               checked={settings.aiWritingSuggestions}
               onChange={(v) => update("aiWritingSuggestions", v)}
               label="Writing Suggestions"
             />
+            <p
+              style={{
+                fontFamily: "'Lora', serif",
+                fontStyle: "italic",
+                fontSize: "0.72rem",
+                color: "var(--theme-muted)",
+                margin: "-0.25rem 0 0.6rem 1.8rem",
+              }}
+            >
+              Active in: Notes, Feed
+            </p>
             <Toggle
               id="aiImageGen"
               checked={settings.aiImageGen}
               onChange={(v) => update("aiImageGen", v)}
               label="AI Image Generation"
             />
+            <p
+              style={{
+                fontFamily: "'Lora', serif",
+                fontStyle: "italic",
+                fontSize: "0.72rem",
+                color: "var(--theme-muted)",
+                margin: "-0.25rem 0 0.6rem 1.8rem",
+              }}
+            >
+              Active in: Notes, Poems, Gallery, Feed, Messages
+            </p>
             <Toggle
               id="aiAudioGen"
               checked={settings.aiAudioGen}
               onChange={(v) => update("aiAudioGen", v)}
               label="AI Audio Generation"
             />
-            <Toggle
-              id="aiTranslation"
-              checked={settings.aiTranslation}
-              onChange={(v) => update("aiTranslation", v)}
-              label="AI Translation"
-            />
-            <p style={{ ...labelStyle, marginTop: "1rem" }}>AI Mode</p>
-            <div
+            <p
               style={{
-                display: "flex",
-                gap: "0.75rem",
-                flexWrap: "wrap",
-                marginBottom: "1rem",
+                fontFamily: "'Lora', serif",
+                fontStyle: "italic",
+                fontSize: "0.72rem",
+                color: "var(--theme-muted)",
+                margin: "-0.25rem 0 0.25rem 1.8rem",
               }}
             >
-              {(
-                [
-                  {
-                    val: "soft",
-                    icon: "🌸",
-                    name: "Soft Emotional",
-                    desc: "Gentle & comforting",
-                  },
-                  {
-                    val: "philosophical",
-                    icon: "🌌",
-                    name: "Deep Philosophical",
-                    desc: "Reflective & thought-provoking",
-                  },
-                  {
-                    val: "minimal",
-                    icon: "🪶",
-                    name: "Minimal",
-                    desc: "Short & direct",
-                  },
-                ] as const
-              ).map(({ val, icon, name, desc }) => (
-                <button
-                  type="button"
-                  key={val}
-                  onClick={() => update("aiMode", val)}
+              Active in: Notes, Poems, Messages
+            </p>
+
+            {/* AI Audio Generation sub-settings — only visible when enabled */}
+            {settings.aiAudioGen && (
+              <div
+                style={{
+                  background: "rgba(212,168,83,0.06)",
+                  border: "1px solid rgba(212,168,83,0.2)",
+                  borderRadius: 10,
+                  padding: "1rem",
+                  margin: "0.25rem 0 0.75rem 1.5rem",
+                }}
+              >
+                <p
                   style={{
-                    flex: "1 1 140px",
-                    padding: "0.75rem",
-                    borderRadius: 12,
-                    border: `1px solid ${settings.aiMode === val ? colors.gold : colors.border}`,
-                    background:
-                      settings.aiMode === val
-                        ? "rgba(212,168,83,0.1)"
-                        : "transparent",
-                    textAlign: "left",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
+                    fontFamily: "'Playfair Display', serif",
+                    fontStyle: "italic",
+                    fontSize: "0.82rem",
+                    color: "var(--theme-gold)",
+                    marginBottom: "0.2rem",
+                    fontWeight: 600,
                   }}
-                  data-ocid={`settings.ai_mode_${val}.button`}
                 >
-                  <div style={{ fontSize: "1.2rem", marginBottom: "0.25rem" }}>
-                    {icon}
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: "'Playfair Display', serif",
-                      fontSize: "0.85rem",
-                      color:
-                        settings.aiMode === val ? colors.mocha : colors.text,
-                    }}
-                  >
-                    {name}
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: "'Lora', serif",
-                      fontSize: "0.75rem",
-                      color: colors.muted,
-                    }}
-                  >
-                    {desc}
-                  </div>
-                </button>
-              ))}
-            </div>
-            <p style={labelStyle}>Default Voice</p>
-            <div style={radioGroupStyle}>
-              {radioOption("male", settings.defaultVoice, "Male", () =>
-                update("defaultVoice", "male"),
-              )}
-              {radioOption("female", settings.defaultVoice, "Female", () =>
-                update("defaultVoice", "female"),
-              )}
-            </div>
-            <p style={labelStyle}>Playback Speed</p>
-            <div style={radioGroupStyle}>
-              {radioOption("slow", settings.playbackSpeed, "Slow", () =>
-                update("playbackSpeed", "slow"),
-              )}
-              {radioOption("normal", settings.playbackSpeed, "Normal", () =>
-                update("playbackSpeed", "normal"),
-              )}
-              {radioOption(
-                "expressive",
-                settings.playbackSpeed,
-                "Expressive",
-                () => update("playbackSpeed", "expressive"),
-              )}
-            </div>
+                  AI Audio Generation Settings
+                </p>
+                <p
+                  style={{
+                    fontFamily: "'Lora', serif",
+                    fontSize: "0.72rem",
+                    color: "var(--theme-muted)",
+                    marginBottom: "0.9rem",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  These settings control voice tone, gender, and speed used when
+                  speaking aloud in Notes, Poems, and Messages.
+                </p>
+
+                {/* AI Mode */}
+                <p
+                  style={{
+                    fontFamily: "'Lora', serif",
+                    fontSize: "0.8rem",
+                    color: "var(--theme-mocha)",
+                    fontWeight: 600,
+                    marginBottom: "0.15rem",
+                  }}
+                >
+                  AI Mode
+                </p>
+                <p
+                  style={{
+                    fontFamily: "'Lora', serif",
+                    fontStyle: "italic",
+                    fontSize: "0.72rem",
+                    color: "var(--theme-muted)",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  Sets the emotional tone of the voice
+                </p>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "0.75rem",
+                    flexWrap: "wrap",
+                    marginBottom: "1rem",
+                  }}
+                >
+                  {(
+                    [
+                      {
+                        val: "soft",
+                        icon: "🌸",
+                        name: "Soft Emotional",
+                        desc: "Warm & gentle delivery",
+                      },
+                      {
+                        val: "philosophical",
+                        icon: "🌙",
+                        name: "Deep Philosophical",
+                        desc: "Slow, reflective tone",
+                      },
+                      {
+                        val: "minimal",
+                        icon: "✦",
+                        name: "Minimal",
+                        desc: "Brief, direct reading",
+                      },
+                    ] as const
+                  ).map(({ val, icon, name, desc }) => (
+                    <button
+                      type="button"
+                      key={val}
+                      onClick={() => update("aiMode", val)}
+                      style={{
+                        flex: "1 1 130px",
+                        padding: "0.65rem",
+                        borderRadius: 10,
+                        border: `1px solid ${settings.aiMode === val ? "var(--theme-gold)" : "var(--theme-border)"}`,
+                        background:
+                          settings.aiMode === val
+                            ? "rgba(212,168,83,0.12)"
+                            : "rgba(255,248,238,0.6)",
+                        textAlign: "left",
+                        cursor: "pointer",
+                        transition: "all 0.2s",
+                      }}
+                      data-ocid={`settings.ai_mode_${val}.button`}
+                    >
+                      <div style={{ fontSize: "1rem", marginBottom: "0.2rem" }}>
+                        {icon}
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: "'Playfair Display', serif",
+                          fontSize: "0.82rem",
+                          color:
+                            settings.aiMode === val
+                              ? "var(--theme-mocha)"
+                              : "var(--theme-muted)",
+                          fontWeight: settings.aiMode === val ? 600 : 400,
+                        }}
+                      >
+                        {name}
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: "'Lora', serif",
+                          fontSize: "0.7rem",
+                          fontStyle: "italic",
+                          color: "var(--theme-muted)",
+                          marginTop: "0.1rem",
+                        }}
+                      >
+                        {desc}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Default Voice */}
+                <p
+                  style={{
+                    fontFamily: "'Lora', serif",
+                    fontSize: "0.8rem",
+                    color: "var(--theme-mocha)",
+                    fontWeight: 600,
+                    marginBottom: "0.15rem",
+                  }}
+                >
+                  Default Voice
+                </p>
+                <p
+                  style={{
+                    fontFamily: "'Lora', serif",
+                    fontStyle: "italic",
+                    fontSize: "0.72rem",
+                    color: "var(--theme-muted)",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  Selects voice gender for playback
+                </p>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "0.75rem",
+                    flexWrap: "wrap",
+                    marginBottom: "0.9rem",
+                  }}
+                >
+                  {["male", "female"].map((v) => (
+                    <button
+                      type="button"
+                      key={v}
+                      onClick={() =>
+                        update("defaultVoice", v as "male" | "female")
+                      }
+                      style={{
+                        padding: "0.4rem 0.9rem",
+                        borderRadius: 20,
+                        border: `1px solid ${settings.defaultVoice === v ? "var(--theme-gold)" : "var(--theme-border)"}`,
+                        background:
+                          settings.defaultVoice === v
+                            ? "rgba(212,168,83,0.12)"
+                            : "transparent",
+                        color:
+                          settings.defaultVoice === v
+                            ? "var(--theme-mocha)"
+                            : "var(--theme-muted)",
+                        fontFamily: "'Lora', serif",
+                        fontSize: "0.85rem",
+                        cursor: "pointer",
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      {v === "male" ? "Male" : "Female"}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Playback Speed */}
+                <p
+                  style={{
+                    fontFamily: "'Lora', serif",
+                    fontSize: "0.8rem",
+                    color: "var(--theme-mocha)",
+                    fontWeight: 600,
+                    marginBottom: "0.15rem",
+                  }}
+                >
+                  Playback Speed
+                </p>
+                <p
+                  style={{
+                    fontFamily: "'Lora', serif",
+                    fontStyle: "italic",
+                    fontSize: "0.72rem",
+                    color: "var(--theme-muted)",
+                    marginBottom: "0.5rem",
+                  }}
+                >
+                  Controls how fast the text is spoken
+                </p>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "0.75rem",
+                    flexWrap: "wrap",
+                    marginBottom: "0.25rem",
+                  }}
+                >
+                  {(
+                    [
+                      { val: "slow", label: "Slow — calm & meditative" },
+                      { val: "normal", label: "Normal — clear & natural" },
+                      {
+                        val: "expressive",
+                        label: "Expressive — lively & dynamic",
+                      },
+                    ] as const
+                  ).map(({ val, label }) => (
+                    <button
+                      type="button"
+                      key={val}
+                      onClick={() => update("playbackSpeed", val)}
+                      style={{
+                        padding: "0.4rem 0.9rem",
+                        borderRadius: 20,
+                        border: `1px solid ${settings.playbackSpeed === val ? "var(--theme-gold)" : "var(--theme-border)"}`,
+                        background:
+                          settings.playbackSpeed === val
+                            ? "rgba(212,168,83,0.12)"
+                            : "transparent",
+                        color:
+                          settings.playbackSpeed === val
+                            ? "var(--theme-mocha)"
+                            : "var(--theme-muted)",
+                        fontFamily: "'Lora', serif",
+                        fontSize: "0.82rem",
+                        cursor: "pointer",
+                        transition: "all 0.2s",
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <button
               type="button"
               onClick={saveAll}
@@ -1195,7 +1599,7 @@ export default function SettingsSlide({
                 borderRadius: 8,
                 background: colors.gold,
                 border: "none",
-                color: "#3D2B1F",
+                color: "var(--theme-bg)",
                 cursor: "pointer",
                 fontFamily: "'Lora', serif",
               }}
@@ -1208,7 +1612,10 @@ export default function SettingsSlide({
 
       case "messaging":
         return (
-          <SectionCard title="Messaging Settings" icon="💬">
+          <SectionCard
+            title="Messaging Settings"
+            icon={<MessageCircle size={16} />}
+          >
             <Toggle
               id="readReceipts"
               checked={settings.readReceipts}
@@ -1234,7 +1641,7 @@ export default function SettingsSlide({
                   fontSize: "0.9rem",
                 }}
               >
-                💤 Mute Conversations — available inside each conversation
+                Mute Conversations — available inside each conversation
               </span>
             </div>
             <Toggle
@@ -1258,7 +1665,7 @@ export default function SettingsSlide({
                 borderRadius: 8,
                 background: colors.gold,
                 border: "none",
-                color: "#3D2B1F",
+                color: "var(--theme-bg)",
                 cursor: "pointer",
                 fontFamily: "'Lora', serif",
               }}
@@ -1271,7 +1678,7 @@ export default function SettingsSlide({
 
       case "content":
         return (
-          <SectionCard title="Content Preferences" icon="🖼️">
+          <SectionCard title="Content Preferences" icon={<Image size={16} />}>
             <p style={labelStyle}>Show</p>
             <select
               style={selectStyle}
@@ -1302,7 +1709,7 @@ export default function SettingsSlide({
                   fontSize: "0.9rem",
                 }}
               >
-                🌐 Language: English (content language is fixed)
+                Language: English (content language is fixed)
               </span>
             </div>
             <div style={{ padding: "0.6rem 0" }}>
@@ -1313,8 +1720,8 @@ export default function SettingsSlide({
                   fontSize: "0.9rem",
                 }}
               >
-                Use the 🌐 globe in the navigation bar to translate the website
-                into any language.
+                Use the globe icon in the navigation bar to translate the
+                website into any language.
               </span>
             </div>
             <button
@@ -1326,7 +1733,7 @@ export default function SettingsSlide({
                 borderRadius: 8,
                 background: colors.gold,
                 border: "none",
-                color: "#3D2B1F",
+                color: "var(--theme-bg)",
                 cursor: "pointer",
                 fontFamily: "'Lora', serif",
               }}
@@ -1339,17 +1746,29 @@ export default function SettingsSlide({
 
       case "language":
         return (
-          <SectionCard title="Language & Translator" icon="🌐">
+          <SectionCard
+            title="Language &amp; Translator"
+            icon={<Globe size={16} />}
+          >
             <div
               style={{
                 background: colors.bg,
-                border: "1px solid rgba(139,111,71,0.25)",
+                border: "1px solid var(--theme-border)",
                 borderRadius: 10,
                 padding: "1.2rem",
                 textAlign: "center",
               }}
             >
-              <p style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🌐</p>
+              <p
+                style={{
+                  fontSize: "1.75rem",
+                  marginBottom: "0.5rem",
+                  display: "flex",
+                  justifyContent: "center",
+                }}
+              >
+                <Globe size={32} style={{ color: "var(--theme-muted)" }} />
+              </p>
               <p
                 style={{
                   fontFamily: "'Playfair Display', serif",
@@ -1368,7 +1787,7 @@ export default function SettingsSlide({
                   lineHeight: 1.6,
                 }}
               >
-                Use the <strong>🌐 globe icon</strong> in the navigation bar to
+                Use the <strong>globe icon</strong> in the navigation bar to
                 translate the entire website into your language.
               </p>
               <p
@@ -1388,7 +1807,7 @@ export default function SettingsSlide({
 
       case "notes":
         return (
-          <SectionCard title="Notes Settings" icon="📓">
+          <SectionCard title="Notes Settings" icon={<NotebookPen size={16} />}>
             <p style={labelStyle}>Default Note Privacy</p>
             <select
               style={selectStyle}
@@ -1416,7 +1835,7 @@ export default function SettingsSlide({
                 borderRadius: 8,
                 background: colors.gold,
                 border: "none",
-                color: "#3D2B1F",
+                color: "var(--theme-bg)",
                 cursor: "pointer",
                 fontFamily: "'Lora', serif",
               }}
@@ -1429,7 +1848,7 @@ export default function SettingsSlide({
 
       case "help":
         return (
-          <SectionCard title="Help Centre" icon="❓">
+          <SectionCard title="Help Centre" icon={<HelpCircle size={16} />}>
             {/* Silent Listener */}
             <div
               style={{
@@ -1437,7 +1856,7 @@ export default function SettingsSlide({
                 borderRadius: 10,
                 padding: "1rem",
                 marginBottom: "1rem",
-                border: "1px solid rgba(139,111,71,0.25)",
+                border: "1px solid var(--theme-border)",
               }}
             >
               <p
@@ -1447,7 +1866,7 @@ export default function SettingsSlide({
                   marginBottom: "0.4rem",
                 }}
               >
-                🤖 The Silent Listener AI Chat
+                The Silent Listener AI Chat
               </p>
               <p
                 style={{
@@ -1470,14 +1889,14 @@ export default function SettingsSlide({
                   borderRadius: 8,
                   background: colors.gold,
                   border: "none",
-                  color: "#3D2B1F",
+                  color: "var(--theme-bg)",
                   cursor: "pointer",
                   fontFamily: "'Lora', serif",
                   fontSize: "0.85rem",
                 }}
                 data-ocid="help.ai_chat.button"
               >
-                ✒️ Open The Silent Listener
+                Open The Silent Listener
               </button>
             </div>
 
@@ -1625,7 +2044,7 @@ export default function SettingsSlide({
                       borderRadius: 8,
                       background: colors.gold,
                       border: "none",
-                      color: "#3D2B1F",
+                      color: "var(--theme-bg)",
                       cursor: "pointer",
                       fontFamily: "'Lora', serif",
                     }}
@@ -1669,14 +2088,14 @@ export default function SettingsSlide({
                 style={{
                   padding: "0.4rem 0.9rem",
                   borderRadius: 20,
-                  border: "1px solid rgba(139,111,71,0.25)",
+                  border: "1px solid var(--theme-border)",
                   color: colors.mocha,
                   textDecoration: "none",
                   fontFamily: "'Lora', serif",
                   fontSize: "0.85rem",
                 }}
               >
-                ▶️ YouTube
+                YouTube
               </a>
               <a
                 href="https://x.com/CHINNUA_POET"
@@ -1685,14 +2104,14 @@ export default function SettingsSlide({
                 style={{
                   padding: "0.4rem 0.9rem",
                   borderRadius: 20,
-                  border: "1px solid rgba(139,111,71,0.25)",
+                  border: "1px solid var(--theme-border)",
                   color: colors.mocha,
                   textDecoration: "none",
                   fontFamily: "'Lora', serif",
                   fontSize: "0.85rem",
                 }}
               >
-                ✕ X (Twitter)
+                X (Twitter)
               </a>
             </div>
           </SectionCard>
@@ -1700,7 +2119,7 @@ export default function SettingsSlide({
 
       case "security":
         return (
-          <SectionCard title="Security Settings" icon="🔐">
+          <SectionCard title="Security Settings" icon={<Shield size={16} />}>
             <button
               type="button"
               onClick={() => setShowPasswordModal(true)}
@@ -1709,7 +2128,7 @@ export default function SettingsSlide({
                 marginBottom: "0.75rem",
                 padding: "0.65rem",
                 borderRadius: 8,
-                border: "1px solid rgba(139,111,71,0.25)",
+                border: "1px solid var(--theme-border)",
                 background: "transparent",
                 color: colors.text,
                 fontFamily: "'Lora', serif",
@@ -1718,7 +2137,7 @@ export default function SettingsSlide({
               }}
               data-ocid="settings.change_password.button"
             >
-              🔑 Change Password
+              Change Password
             </button>
             <div
               style={{
@@ -1733,7 +2152,7 @@ export default function SettingsSlide({
                   fontSize: "0.9rem",
                 }}
               >
-                🔗 Connected Account: Google (Gmail)
+                Connected Account: Google (Gmail)
               </span>
             </div>
             <div
@@ -1758,7 +2177,7 @@ export default function SettingsSlide({
                 }
                 data-ocid="settings.logout_all.button"
               >
-                🚪 Logout from all devices
+                Logout from all devices
               </button>
             </div>
             <Toggle
@@ -1877,7 +2296,7 @@ export default function SettingsSlide({
                         background: colors.gold,
                         border: "none",
                         borderRadius: 8,
-                        color: "#3D2B1F",
+                        color: "var(--theme-bg)",
                         fontFamily: "'Lora', serif",
                         cursor: "pointer",
                         fontWeight: 600,
@@ -1987,7 +2406,7 @@ export default function SettingsSlide({
                           borderRadius: 8,
                           background: colors.gold,
                           border: "none",
-                          color: "#3D2B1F",
+                          color: "var(--theme-bg)",
                           cursor: "pointer",
                           fontFamily: "'Lora', serif",
                         }}
@@ -2007,7 +2426,7 @@ export default function SettingsSlide({
                           flex: 1,
                           padding: "0.6rem",
                           borderRadius: 8,
-                          border: "1px solid rgba(139,111,71,0.25)",
+                          border: "1px solid var(--theme-border)",
                           background: "transparent",
                           color: colors.muted,
                           cursor: "pointer",
@@ -2027,7 +2446,10 @@ export default function SettingsSlide({
 
       case "email":
         return (
-          <SectionCard title="Email & Notification Settings" icon="📩">
+          <SectionCard
+            title="Email &amp; Notification Settings"
+            icon={<Mail size={16} />}
+          >
             <Toggle
               id="emailUpdates"
               checked={settings.emailUpdates}
@@ -2055,7 +2477,7 @@ export default function SettingsSlide({
                 borderRadius: 8,
                 background: colors.gold,
                 border: "none",
-                color: "#3D2B1F",
+                color: "var(--theme-bg)",
                 cursor: "pointer",
                 fontFamily: "'Lora', serif",
               }}
@@ -2068,7 +2490,7 @@ export default function SettingsSlide({
 
       case "account":
         return (
-          <SectionCard title="Account Controls" icon="🚪">
+          <SectionCard title="Account Controls" icon={<LogOut size={16} />}>
             <button
               type="button"
               onClick={onLogout}
@@ -2077,7 +2499,7 @@ export default function SettingsSlide({
                 marginBottom: "0.75rem",
                 padding: "0.7rem",
                 borderRadius: 8,
-                border: "1px solid rgba(139,111,71,0.25)",
+                border: "1px solid var(--theme-border)",
                 background: "transparent",
                 color: colors.text,
                 fontFamily: "'Lora', serif",
@@ -2086,7 +2508,7 @@ export default function SettingsSlide({
               }}
               data-ocid="settings.logout.button"
             >
-              🚪 Logout
+              Logout
             </button>
             <button
               type="button"
@@ -2105,7 +2527,7 @@ export default function SettingsSlide({
               }}
               data-ocid="settings.deactivate.button"
             >
-              ⏸️ Deactivate Account
+              Deactivate Account
             </button>
             <button
               type="button"
@@ -2123,7 +2545,7 @@ export default function SettingsSlide({
               }}
               data-ocid="settings.delete_account.button"
             >
-              🗑️ Delete Account
+              Delete Account
             </button>
 
             <AnimatePresence>
@@ -2183,7 +2605,7 @@ export default function SettingsSlide({
                           flex: 1,
                           padding: "0.6rem",
                           borderRadius: 8,
-                          border: "1px solid rgba(139,111,71,0.25)",
+                          border: "1px solid var(--theme-border)",
                           background: "transparent",
                           color: colors.muted,
                           cursor: "pointer",
@@ -2205,7 +2627,7 @@ export default function SettingsSlide({
                           borderRadius: 8,
                           background: colors.brown,
                           border: "none",
-                          color: "#3D2B1F",
+                          color: "var(--theme-bg)",
                           cursor: "pointer",
                           fontFamily: "'Lora', serif",
                         }}
@@ -2286,7 +2708,7 @@ export default function SettingsSlide({
                           flex: 1,
                           padding: "0.6rem",
                           borderRadius: 8,
-                          border: "1px solid rgba(139,111,71,0.25)",
+                          border: "1px solid var(--theme-border)",
                           background: "transparent",
                           color: colors.muted,
                           cursor: "pointer",
@@ -2315,7 +2737,7 @@ export default function SettingsSlide({
                               ? "#c0392b"
                               : "rgba(192,57,43,0.4)",
                           border: "none",
-                          color: "#3D2B1F",
+                          color: "var(--theme-bg)",
                           cursor:
                             deleteText === "DELETE" ? "pointer" : "not-allowed",
                           fontFamily: "'Lora', serif",
@@ -2399,7 +2821,7 @@ export default function SettingsSlide({
             borderRadius: 16,
             padding: "1rem 0.5rem",
             boxShadow: "0 2px 12px rgba(92,61,46,0.08)",
-            border: "1px solid rgba(139,111,71,0.25)",
+            border: "1px solid var(--theme-border)",
             position: "sticky",
             top: 16,
             display: window.innerWidth < 640 ? "none" : undefined,

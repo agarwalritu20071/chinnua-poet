@@ -6,6 +6,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  BarChart2,
+  Bookmark,
+  Camera,
+  Heart,
+  MessageCircle,
+  MessageSquare,
+  Smile,
+  Sparkles,
+  Tag,
+} from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -16,6 +27,11 @@ import CommentThread, {
 import EmojiPicker from "../components/EmojiPicker";
 import { LoginGate } from "../components/LoginGate";
 import { AI_BOTS, BOT_POSTS, seedBotData } from "../data/ai-bots";
+import {
+  generateAIImage,
+  getWritingSuggestions,
+  useAISettings,
+} from "../hooks/useAISettings";
 import { useActor } from "../hooks/useActor";
 import { POEMS } from "../poems-data";
 
@@ -42,6 +58,7 @@ interface Post {
   timestamp: string;
   likes: number;
   replies: Reply[];
+  image?: string; // base64 data URL
 }
 
 interface FeedSlideProps {
@@ -471,6 +488,25 @@ function PostCard({
         </p>
       </button>
 
+      {/* Post image */}
+      {post.image && (
+        <div
+          style={{ marginTop: "0.75rem", borderRadius: 10, overflow: "hidden" }}
+        >
+          <img
+            src={post.image}
+            alt={post.title || "Post attachment"}
+            style={{
+              width: "100%",
+              maxHeight: 280,
+              objectFit: "cover",
+              borderRadius: 10,
+              display: "block",
+            }}
+          />
+        </div>
+      )}
+
       {/* Footer actions */}
       <div
         style={{
@@ -518,7 +554,7 @@ function PostCard({
             transition: "color 0.2s",
           }}
         >
-          ❤️ {post.likes}
+          <Heart size={14} /> {post.likes}
         </button>
         <button
           type="button"
@@ -539,7 +575,7 @@ function PostCard({
             gap: 3,
           }}
         >
-          💬 {post.replies.length}
+          <MessageCircle size={14} /> {post.replies.length}
         </button>
         <button
           type="button"
@@ -560,7 +596,11 @@ function PostCard({
             transition: "color 0.2s",
           }}
         >
-          {bookmarked ? "🔖" : "🏷"}
+          {bookmarked ? (
+            <Bookmark size={14} fill="#D4A853" />
+          ) : (
+            <Tag size={14} />
+          )}
         </button>
         {/* Comments toggle */}
         <button
@@ -588,7 +628,7 @@ function PostCard({
             transition: "all 0.2s",
           }}
         >
-          🗨 {comments.length}
+          <MessageSquare size={13} /> {comments.length}
         </button>
       </div>
 
@@ -625,6 +665,11 @@ export default function FeedSlide({
   onViewProfile,
 }: FeedSlideProps) {
   const [posts, setPosts] = useState<Post[]>([]);
+  const aiSettings = useAISettings();
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [showAiSuggestions, setShowAiSuggestions] = useState(false);
+  const [aiImageData, setAiImageData] = useState<string | null>(null);
+  const [generatingAiImage, setGeneratingAiImage] = useState(false);
   const [newPost, setNewPost] = useState("");
   const [postTopic, setPostTopic] = useState("");
   const [whoCanReply, setWhoCanReply] = useState<string>(
@@ -734,7 +779,7 @@ export default function FeedSlide({
     if (showPoll && pollOptionA && pollOptionB) {
       fullContent += `\n\n[POLL]\nA: ${pollOptionA}\nB: ${pollOptionB}`;
     }
-    const post: Post & { image?: string; pollOptions?: string[] } = {
+    const post: Post & { pollOptions?: string[] } = {
       id: `user_${Date.now()}`,
       username: currentUser.username,
       title: postTopic.trim() || "",
@@ -744,7 +789,7 @@ export default function FeedSlide({
       timestamp: new Date().toISOString(),
       likes: 0,
       replies: [],
-      ...(postImage ? { image: postImage } : {}),
+      image: postImage || undefined,
       ...(showPoll && pollOptionA && pollOptionB
         ? { pollOptions: [pollOptionA, pollOptionB] }
         : {}),
@@ -790,6 +835,10 @@ export default function FeedSlide({
       localStorage.setItem("chinnua_saved_items", JSON.stringify(items));
     }
     setSavedPosts(newSaved);
+    const isSaved = newSaved.has(postId);
+    toast(isSaved ? "Saved to your profile ✦" : "Removed from saved", {
+      duration: 2000,
+    });
   };
 
   const handleLike = (postId: string) => {
@@ -949,7 +998,7 @@ export default function FeedSlide({
               <input
                 value={postTopic}
                 onChange={(e) => setPostTopic(e.target.value)}
-                placeholder="📌 Add a topic (optional)"
+                placeholder="Add a topic (optional)"
                 data-ocid="feed.input"
                 style={{
                   width: "100%",
@@ -968,18 +1017,112 @@ export default function FeedSlide({
               <Textarea
                 value={newPost}
                 onChange={(e) => setNewPost(e.target.value)}
-                placeholder="What's new? Share your poetry or thoughts..."
+                placeholder={
+                  aiSettings.writingMode === "free"
+                    ? "Free verse — let words fall as they come..."
+                    : aiSettings.writingMode === "structured"
+                      ? "Line 1 of 4 — begin your stanza..."
+                      : "What's new? Share your poetry or thoughts..."
+                }
                 data-ocid="feed.textarea"
+                rows={aiSettings.writingMode === "structured" ? 4 : undefined}
                 style={{
                   background: "transparent",
                   border: "1px solid rgba(212,168,83,0.2)",
                   color: "#3D2B1F",
                   fontFamily: "'Playfair Display', Georgia, serif",
                   fontSize: "0.95rem",
-                  resize: "none",
+                  resize:
+                    aiSettings.writingMode === "free" ? "vertical" : "none",
                   minHeight: 70,
                 }}
               />
+              {/* Writing mode label */}
+              {aiSettings.writingMode === "free" && (
+                <p
+                  style={{
+                    fontFamily: "'Lora', serif",
+                    fontStyle: "italic",
+                    fontSize: "0.68rem",
+                    color: "#8B6F47",
+                    margin: "0.15rem 0 0",
+                    opacity: 0.8,
+                  }}
+                >
+                  Free Verse Mode — no limits, just flow
+                </p>
+              )}
+              {aiSettings.writingMode === "structured" && (
+                <p
+                  style={{
+                    fontFamily: "'Lora', serif",
+                    fontStyle: "italic",
+                    fontSize: "0.68rem",
+                    color: "#8B6F47",
+                    margin: "0.15rem 0 0",
+                    opacity: 0.8,
+                  }}
+                >
+                  Structured Mode — Line{" "}
+                  {Math.min(newPost.split("\n").length, 4)} of 4
+                </p>
+              )}
+              {aiSettings.aiWritingSuggestions && newPost.length > 10 && (
+                <div style={{ position: "relative" }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAiSuggestions(getWritingSuggestions(newPost));
+                      setShowAiSuggestions((v) => !v);
+                    }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      fontFamily: "'Lora', serif",
+                      fontStyle: "italic",
+                      fontSize: "0.72rem",
+                      color: "#8B6F47",
+                      padding: "0.25rem 0",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.3rem",
+                    }}
+                    data-ocid="feed.toggle"
+                  >
+                    <Sparkles size={11} />
+                    Writing Tips
+                  </button>
+                  {showAiSuggestions && aiSuggestions.length > 0 && (
+                    <div
+                      style={{
+                        background: "#F5ECD7",
+                        border: "1px solid rgba(212,168,83,0.3)",
+                        borderRadius: 8,
+                        padding: "0.6rem 0.9rem",
+                        marginTop: "0.25rem",
+                        zIndex: 20,
+                      }}
+                    >
+                      {aiSuggestions.map((s) => (
+                        <p
+                          key={s}
+                          style={{
+                            fontFamily: "'Lora', serif",
+                            fontStyle: "italic",
+                            fontSize: "0.78rem",
+                            color: "#5C3D2E",
+                            margin: "0.2rem 0",
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          • {s}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               {postImage && (
                 <div style={{ position: "relative", marginTop: "0.5rem" }}>
                   <img
@@ -1098,8 +1241,43 @@ export default function FeedSlide({
                   }}
                   data-ocid="feed.upload_button"
                 >
-                  📷
+                  <Camera size={16} />
                 </button>
+                {aiSettings.aiImageGen && (
+                  <button
+                    type="button"
+                    title="Generate AI Image"
+                    onClick={async () => {
+                      if (!newPost.trim()) return;
+                      setGeneratingAiImage(true);
+                      try {
+                        const img = await generateAIImage(newPost);
+                        setAiImageData(img);
+                        setPostImage(img);
+                      } finally {
+                        setGeneratingAiImage(false);
+                      }
+                    }}
+                    disabled={generatingAiImage || !newPost.trim()}
+                    style={{
+                      background: aiImageData ? "rgba(212,168,83,0.2)" : "none",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: "0.8rem",
+                      padding: "0.2rem 0.4rem",
+                      borderRadius: 4,
+                      color: "#8B6F47",
+                      fontFamily: "'Lora', serif",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.2rem",
+                    }}
+                    data-ocid="feed.secondary_button"
+                  >
+                    <Sparkles size={14} />
+                    {generatingAiImage ? "…" : "AI Image"}
+                  </button>
+                )}
                 <div style={{ position: "relative" }}>
                   <button
                     type="button"
@@ -1117,7 +1295,7 @@ export default function FeedSlide({
                     }}
                     data-ocid="feed.toggle"
                   >
-                    😊
+                    <Smile size={16} />
                   </button>
                   {showEmojiPicker && (
                     <div
@@ -1151,7 +1329,7 @@ export default function FeedSlide({
                   }}
                   data-ocid="feed.toggle"
                 >
-                  📊
+                  <BarChart2 size={16} />
                 </button>
                 <div
                   style={{
@@ -1176,9 +1354,9 @@ export default function FeedSlide({
                       cursor: "pointer",
                     }}
                   >
-                    <option value="anyone">👥 Anyone can reply</option>
-                    <option value="followers">👤 Followers only</option>
-                    <option value="following">✓ People I follow</option>
+                    <option value="anyone">Anyone can reply</option>
+                    <option value="followers">Followers only</option>
+                    <option value="following">People I follow</option>
                     <option value="mentioned">@ Mentioned only</option>
                   </select>
                 </div>

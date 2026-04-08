@@ -1,11 +1,13 @@
+import { Lightbulb, Sparkles, Volume2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import {
-  getAiSettings,
-  getAutoSuggestLine,
+  generateAIImage,
+  getAISettings,
   getWritingSuggestions,
-  speakText,
-} from "../utils/aiFeatures";
+  speakText as speakTextFromHook,
+} from "../hooks/useAISettings";
+import { getAutoSuggestLine } from "../utils/aiFeatures";
 
 interface Note {
   id: string;
@@ -91,7 +93,9 @@ function NoteFormModal({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [autoSuggest, setAutoSuggest] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const aiSettings = getAiSettings();
+  const [noteAiImage, setNoteAiImage] = useState<string | null>(null);
+  const [generatingAiImage, setGeneratingAiImage] = useState(false);
+  const aiSettings = getAISettings();
 
   // Auto-suggest debounce
   const handleContentChange = (val: string) => {
@@ -226,19 +230,67 @@ function NoteFormModal({
           <div>
             <label htmlFor="note-content" style={labelStyle}>
               Content
+              {aiSettings.writingMode === "free" && (
+                <span
+                  style={{
+                    marginLeft: "0.5rem",
+                    fontStyle: "italic",
+                    opacity: 0.7,
+                    textTransform: "none",
+                    letterSpacing: 0,
+                  }}
+                >
+                  — Free Verse Mode
+                </span>
+              )}
+              {aiSettings.writingMode === "structured" && (
+                <span
+                  style={{
+                    marginLeft: "0.5rem",
+                    fontStyle: "italic",
+                    opacity: 0.7,
+                    textTransform: "none",
+                    letterSpacing: 0,
+                  }}
+                >
+                  — Line {Math.min(content.split("\n").length, 4)} of 4
+                </span>
+              )}
             </label>
             <textarea
               id="note-content"
               data-ocid="notes.textarea"
               value={content}
               onChange={(e) => handleContentChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (
+                  e.key === "Tab" &&
+                  autoSuggest &&
+                  aiSettings.aiAutoSuggest
+                ) {
+                  e.preventDefault();
+                  setContent((prev) => `${prev} ${autoSuggest}`);
+                  setAutoSuggest("");
+                }
+              }}
               onFocus={() => setContentFocused(true)}
               onBlur={() => setContentFocused(false)}
-              placeholder="Pour your thoughts here..."
-              rows={10}
+              placeholder={
+                aiSettings.writingMode === "free"
+                  ? "Let words fall freely — no structure required..."
+                  : aiSettings.writingMode === "structured"
+                    ? "Begin your verse — 4 lines, each with intention..."
+                    : "Pour your thoughts here..."
+              }
+              rows={aiSettings.writingMode === "structured" ? 4 : 10}
               style={{
                 ...inputStyle,
-                resize: "vertical",
+                resize:
+                  aiSettings.writingMode === "free"
+                    ? "vertical"
+                    : aiSettings.writingMode === "structured"
+                      ? "none"
+                      : "vertical",
                 lineHeight: 1.75,
                 borderColor: contentFocused
                   ? "rgba(200,169,106,0.7)"
@@ -248,12 +300,42 @@ function NoteFormModal({
                   : "none",
               }}
             />
+            {/* Auto-suggest ghost text */}
+            {aiSettings.aiAutoSuggest && autoSuggest && (
+              <div style={{ position: "relative", marginTop: "-0.25rem" }}>
+                <p
+                  style={{
+                    fontFamily: "'Cormorant Garamond', Georgia, serif",
+                    fontStyle: "italic",
+                    fontSize: "0.88rem",
+                    color: "rgba(139,111,71,0.45)",
+                    margin: "0.15rem 0 0",
+                    paddingLeft: "0.85rem",
+                    borderLeft: "2px solid rgba(212,168,83,0.2)",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {autoSuggest}
+                  <span
+                    style={{
+                      marginLeft: "0.5rem",
+                      fontSize: "0.65rem",
+                      color: "rgba(139,111,71,0.35)",
+                      fontFamily: "'Lora', serif",
+                    }}
+                  >
+                    [Tab to accept]
+                  </span>
+                </p>
+              </div>
+            )}
           </div>
 
           {/* AI Writing Tools */}
           {(aiSettings.aiAutoSuggest ||
             aiSettings.aiWritingSuggestions ||
-            aiSettings.aiAudioGen) && (
+            aiSettings.aiAudioGen ||
+            aiSettings.aiImageGen) && (
             <div
               style={{
                 display: "flex",
@@ -265,13 +347,7 @@ function NoteFormModal({
               {aiSettings.aiAudioGen && (
                 <button
                   type="button"
-                  onClick={() =>
-                    speakText(
-                      content,
-                      aiSettings.defaultVoice,
-                      aiSettings.playbackSpeed,
-                    )
-                  }
+                  onClick={() => speakTextFromHook(content, aiSettings)}
                   data-ocid="notes.secondary_button"
                   style={{
                     padding: "0.25rem 0.7rem",
@@ -284,7 +360,7 @@ function NoteFormModal({
                     color: "#8B6F47",
                   }}
                 >
-                  🔊 Listen
+                  <Volume2 size={13} /> Listen
                 </button>
               )}
               {aiSettings.aiWritingSuggestions && content.length > 20 && (
@@ -306,11 +382,79 @@ function NoteFormModal({
                     color: "#8B6F47",
                   }}
                 >
-                  ✨ Suggestions
+                  <Sparkles size={13} /> Suggestions
+                </button>
+              )}
+              {aiSettings.aiImageGen && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setGeneratingAiImage(true);
+                    try {
+                      const img = await generateAIImage(`${title} ${content}`);
+                      setNoteAiImage(img);
+                    } finally {
+                      setGeneratingAiImage(false);
+                    }
+                  }}
+                  disabled={generatingAiImage}
+                  data-ocid="notes.secondary_button"
+                  style={{
+                    padding: "0.25rem 0.7rem",
+                    background: noteAiImage
+                      ? "rgba(212,168,83,0.1)"
+                      : "transparent",
+                    border: "1px solid rgba(139,111,71,0.3)",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    fontFamily: "'Lora', Georgia, serif",
+                    fontSize: "0.72rem",
+                    color: "#8B6F47",
+                  }}
+                >
+                  ✦ {generatingAiImage ? "Generating…" : "Generate Image"}
                 </button>
               )}
             </div>
           )}
+          {/* AI generated image preview */}
+          {noteAiImage && (
+            <div style={{ position: "relative", marginTop: "0.25rem" }}>
+              <img
+                src={noteAiImage}
+                alt="AI"
+                style={{
+                  maxHeight: 100,
+                  borderRadius: 8,
+                  maxWidth: "100%",
+                  objectFit: "cover",
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setNoteAiImage(null)}
+                style={{
+                  position: "absolute",
+                  top: 3,
+                  right: 3,
+                  background: "rgba(0,0,0,0.45)",
+                  border: "none",
+                  borderRadius: "50%",
+                  width: 18,
+                  height: 18,
+                  cursor: "pointer",
+                  color: "white",
+                  fontSize: "0.65rem",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           {/* Auto-suggest ghost text */}
           {aiSettings.aiAutoSuggest && autoSuggest && (
             <div
